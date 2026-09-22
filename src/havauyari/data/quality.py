@@ -16,25 +16,9 @@ import numpy as np
 import pandas as pd
 
 from havauyari.alerts.aqi import PM25_BREAKPOINTS
-from havauyari.config import RAW_DIR, ROOT, TARGET
+from havauyari.config import PHYSICAL_LIMITS, RAW_DIR, ROOT, TARGET
 
 REPORT_PATH = ROOT / "reports" / "veri_kalite_raporu.md"
-
-# Fiziksel olarak mümkün aralıklar (dışındaki değerler hatalı kabul edilir)
-PHYSICAL_LIMITS: dict[str, tuple[float, float]] = {
-    "pm2_5": (0, 1000),
-    "pm10": (0, 2000),
-    "nitrogen_dioxide": (0, 1000),
-    "ozone": (0, 1000),
-    "carbon_monoxide": (0, 50000),
-    "sulphur_dioxide": (0, 2000),
-    "temperature_2m": (-40, 55),
-    "relative_humidity_2m": (0, 100),
-    "wind_speed_10m": (0, 200),
-    "wind_direction_10m": (0, 360),
-    "surface_pressure": (800, 1100),
-    "precipitation": (0, 200),
-}
 
 # Değişmemesi normal olan değişkenler (yağış çoğu saat 0'dır)
 FLATLINE_EXEMPT = {"precipitation"}

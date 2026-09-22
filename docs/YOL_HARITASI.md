@@ -54,9 +54,15 @@ Toplam süre tahmini: ~7 hafta (haftada 10-15 saat).
       kaçırıyor olabilir → README sınırlamalarına eklenecek.
     - Şehirler arası günlük korelasyon 0.43-0.75 → bölgesel etkiler var; diğer şehirlerin geçmiş
       değerleri Faz 2'de özellik olarak denenebilir.
-- [ ] **1.3 Temizlik**
+- [x] **1.3 Temizlik**
   - Çıktı: `data/processed/all_cities.parquet`
   - Bitti sayılır: saatlik frekans kesintisiz, negatif değer yok
+  - Sonuç: 162.720 satır (5 × 32.544). Kesinti, sınır dışı değer, boş değer yok;
+    PM2.5 > PM10 olan 76 saat PM10 ile sınırlandı. Sıçramalar korundu.
+  - Düzeltme: `interpolate(limit=n)` uzun boşlukların ilk n saatini de dolduruyordu;
+    `fill_short_gaps` yalnızca ≤ 3 saatlik boşlukları dolduruyor (testli).
+  - Not (Faz 3.1 için): son 30 günlük tek test penceresinde (Ağu-Eyl) hiç uyarı saati yok,
+    alarm metrikleri anlamsız kalıyor → walk-forward pencereleri kış aylarını da kapsamalı.
 - [ ] **1.4 EDA notebook'u** (`notebooks/01_eda.ipynb`)
   - Çıktı: saatlik/haftalık/yıllık desenler, kış ısınma etkisi, rüzgâr–PM2.5 ilişkisi,
     şehir karşılaştırması, kirleticiler arası korelasyon, otokorelasyon (ACF/PACF)

@@ -13,10 +13,8 @@ import pandas as pd
 
 from havauyari.config import PROCESSED_DIR, TARGET
 from havauyari.evaluation.metrics import alert_metrics, regression_metrics
-from havauyari.features.build import build_all_cities
+from havauyari.features.build import build_all_cities, feature_columns
 from havauyari.models.baselines import moving_average, persistence, seasonal_naive
-
-NON_FEATURES = {"city"}
 
 
 def walk_forward_splits(index: pd.DatetimeIndex, n_folds: int, test_days: int = 30):
@@ -30,9 +28,9 @@ def walk_forward_splits(index: pd.DatetimeIndex, n_folds: int, test_days: int = 
 
 def evaluate(df: pd.DataFrame, horizon: int, n_folds: int) -> pd.DataFrame:
     target = f"target_h{horizon}"
-    feats = build_all_cities(df, [horizon]).dropna(subset=[target])
+    feats = build_all_cities(df, horizon).dropna(subset=[target])
     feats["city_code"] = feats["city"].astype("category").cat.codes
-    x_cols = [c for c in feats.columns if c not in NON_FEATURES and not c.startswith("target_")]
+    x_cols = feature_columns(feats)
 
     preds = {
         "persistence": pd.concat(persistence(g[TARGET], horizon) for _, g in feats.groupby("city")),

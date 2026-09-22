@@ -83,14 +83,51 @@ Toplam süre tahmini: ~7 hafta (haftada 10-15 saat).
 
 ## FAZ 2: Özellik Mühendisliği · ~3-4 gün
 
-- [ ] **2.1 Geçmiş değer özellikleri** (lag, kayan ortalama/std): mevcut, EDA'ya göre gözden geçir
-- [ ] **2.2 Takvim ve tatil özellikleri** (resmî tatiller, bayramlar, okul dönemi)
-- [ ] **2.3 Meteoroloji özellikleri**
+- [x] **2.1 Geçmiş değer özellikleri** (lag, kayan ortalama/std): mevcut, EDA'ya göre gözden geçir
+  - Sonuç: ACF bulgusuyla lag seti (1, 2, 3, 6, 12, 24, 48, 168) korundu. Eklenenler: 24 s kayan
+    maksimum, 1 s / 24 s değişim ve **hedef saatle hizalı** geçmiş değerler (hedef anından 1 gün ve
+    1 hafta önceki aynı saat).
+- [x] **2.2 Takvim ve tatil özellikleri** (resmî tatiller, bayramlar, okul dönemi)
+  - Sonuç: `holidays` paketiyle Türkiye resmî tatilleri (dinî bayramlar dahil, 2023-2026'da 55 gün).
+    Hedef anının (t+h) saati, haftanın günü, hafta sonu ve tatil bilgisi `tgt_` özellikleri olarak
+    eklendi; bunlar önceden bilindiği için sızıntı değil.
+  - Kapsam dışı: arefe yarım günleri, köprü tatilleri, okul dönemi (etkisi düşük beklendi).
+- [x] **2.3 Meteoroloji özellikleri**
   - Çıktı: rüzgâr u/v, sıcaklık farkı (inversiyon göstergesi), yağış birikimi
   - Not: tahmin anında gelecekteki hava durumu ancak *hava tahmini* olarak bilinir.
     Önce sadece geçmiş hava durumu kullanılır, gelecek hava tahmini ayrı bir deney (Faz 3.5).
-- [ ] **2.4 Sızıntı testleri genişletme**
+  - Sonuç: rüzgâr hızı ve u/v 24 s ortalamaları, durgun saat sayısı (< 4 km/sa), yağış 3/6/24 s
+    toplamı, ısıtma derece-saati, 24 s sıcaklık aralığı ve değişimi, basınç değişimi, nem ortalaması;
+    PM10, NO₂, SO₂, CO, O₃ için lag 1/24 ve 24 s ortalama; PM2.5/PM10 oranı.
+  - Yüksek seviye sıcaklık verisi arşiv API'sinde olmadığı için gerçek inversiyon göstergesi
+    hesaplanamadı; yerine "24 s sıcaklık aralığı + durgun saat" vekil olarak kullanıldı.
+- [x] **2.4 Sızıntı testleri genişletme**
   - Bitti sayılır: her yeni özellik için "t anında sadece ≤ t bilgisi" testi var
+  - Sonuç: genel sızıntı testi: t0 sonrasındaki tüm ölçümler bozulduğunda t0 ve öncesindeki
+    **hiçbir** özelliğin değişmediği 5 ufukta (1/6/24/48/72 s) doğrulanıyor. İleride eklenecek
+    özellikler de bu testten otomatik geçmek zorunda. Toplam 47 test.
+
+**Faz 2 değerlendirmesi** (24 s ufku, aynı LightGBM ayarları, eski 37 vs yeni 79 özellik):
+
+| Test dönemi | Model | MAE | RMSE | Uyarı recall (≥ 35,5) | Uyarı F1 |
+|---|---|---|---|---|---|
+| Kış (Ara 2025–Mar 2026) | Persistence | 11,41 | 17,44 | 0,525 | 0,523 |
+| | LightGBM, eski özellikler | 10,10 | 15,09 | 0,475 | 0,523 |
+| | LightGBM, yeni özellikler | **10,08** | **14,93** | 0,497 | **0,539** |
+| Yaz (son 4×30 gün) | Persistence | 3,63 | 5,26 | – | – |
+| | LightGBM, eski özellikler | 3,52 | 4,62 | – | – |
+| | LightGBM, yeni özellikler | **3,46** | **4,57** | – | – |
+
+- İyileşme küçük: kışın MAE %0,2, RMSE %1,1; yazın MAE %1,6. Kış MAE farkı tohum değişimiyle
+  oluşan oynama düzeyinde. Yeni özellikler önem payının %35'ini alsa da çoğunlukla mevcut bilgiyi
+  tekrar ediyor.
+- **Asıl darboğaz gelecekteki hava durumu:** EDA'da 24 s sonraki uyarıların %37–64'ünün yeni
+  başladığı görülmüştü; geçmiş meteoroloji bunu öngörmekte sınırlı. Faz 3.5 (hava tahmini özelliği)
+  en büyük kazancı getirecek adım olarak öne çekilmeli.
+- **Uyarı yakalama zayıf:** LightGBM kışın MAE'de persistence'tan %12 iyi olmasına rağmen uyarı
+  recall'ü daha düşük (0,50 vs 0,53): ortalama hatayı küçülten model zirveleri bastırıyor.
+  Faz 4.4'te eşik kaydırma, quantile tahmin ya da ayrı bir uyarı sınıflandırıcısı denenecek.
+- Özellik elemesi Faz 4.6'da SHAP ile yapılacak; şimdilik tüm özellikler tutuluyor.
 
 ## FAZ 3: Modelleme · ~1 hafta
 

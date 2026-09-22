@@ -41,7 +41,7 @@ Tam analiz: [notebooks/01_eda.ipynb](notebooks/01_eda.ipynb)
 </p>
 
 ## Yaklaşım
-- **Özellikler:** lag'ler (1 saat–1 hafta), kayan ortalama/std, döngüsel takvim kodlaması, rüzgâr u/v vektörü, meteoroloji
+- **Özellikler (79):** PM2.5 geçmişi (1 saat–1 hafta lag'ler, kayan istatistikler, hedef saatle hizalı geçmiş değerler), diğer kirleticilerin geçmişi, meteoroloji (rüzgâr vektörü ve durgunluk, yağış birikimi, ısıtma derece-saati, basınç ve sıcaklık değişimi), takvim ve Türkiye resmî tatilleri. Hedef anının saati ve tatil bilgisi önceden bilindiği için ayrıca kullanılır. Bir sızıntı testi, gelecek verinin hiçbir özelliğe karışmadığını doğrular.
 - **Baseline modeller:** Persistence, Seasonal Naive (haftalık), 24 saatlik hareketli ortalama
 - **Model:** LightGBM (direkt çok-ufuklu tahmin)
 - **Doğrulama:** Walk-forward (zamana göre ileri kayan) doğrulama; test pencereleri kış aylarını da kapsar. Rastgele split kullanılmaz.
@@ -91,7 +91,7 @@ Ayrıntılı alt fazlar ve alınan kararlar: [docs/YOL_HARITASI.md](docs/YOL_HAR
 - [x] Geliştirme ortamı, CI
 - [x] Veri toplama, kalite raporu, temizlik
 - [x] Keşifsel veri analizi (EDA)
-- [ ] Özellik mühendisliği (meteoroloji, tatiller, diğer kirleticiler)
+- [x] Özellik mühendisliği (meteoroloji, tatiller, diğer kirleticiler)
 - [ ] Modelleme: baseline'lar, LightGBM, 24/48/72 saat ufukları
 - [ ] Optuna, MLflow, hata analizi, SHAP, tahmin aralıkları
 - [ ] FastAPI (`/forecast/{city}`, `/alerts`)

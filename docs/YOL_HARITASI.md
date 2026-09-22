@@ -76,8 +76,10 @@ Toplam süre tahmini: ~7 hafta (haftada 10-15 saat).
     - Faz 3.5 önceliği yükseldi: 24 s sonraki uyarıların %37–64'ü şu an uyarı olmayan saatlerden
       geliyor; başlangıcı yakalamak için gelecek hava tahmini özelliği gerekli olabilir.
     - Ana uyarı eşiği önerisi: 35,5 µg/m³; 55,5 ikinci kademe (Faz 4.4'te kesinleşecek).
-- [ ] **1.5 Bulguların özeti**
+- [x] **1.5 Bulguların özeti**
   - Çıktı: README'ye 3-5 maddelik "Veriden öğrendiklerimiz" + 2-3 grafik
+  - Sonuç: README'ye 5 bulgu, 3 grafik, veri kapsamı, "Sınırlamalar" bölümü, CI rozeti ve
+    `make` tabanlı kurulum adımları eklendi.
 
 ## FAZ 2: Özellik Mühendisliği · ~3-4 gün
 

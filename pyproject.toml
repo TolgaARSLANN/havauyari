@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "havauyari"
+version = "0.1.0"
+description = "Türkiye şehirleri için hava kalitesi (PM2.5/PM10) tahmini ve erken uyarı sistemi"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "requests>=2.31",
+    "pyarrow>=15",
+    "scikit-learn>=1.4",
+    "lightgbm>=4.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5", "jupyter", "matplotlib", "seaborn"]
+ml = ["optuna>=3.6", "shap>=0.45", "mlflow>=2.12"]
+serve = ["fastapi>=0.110", "uvicorn>=0.29", "streamlit>=1.35", "plotly>=5.20", "folium>=0.16"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

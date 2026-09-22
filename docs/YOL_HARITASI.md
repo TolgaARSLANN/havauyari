@@ -154,6 +154,49 @@ Toplam süre tahmini: ~7 hafta (haftada 10-15 saat).
 - [ ] **3.5 Alternatif modeller**: Ridge, Random Forest, (opsiyonel) Prophet / LSTM, gelecek hava tahmini deneyi
   - Çıktı: `notebooks/03_modeling.ipynb` + model karşılaştırma tablosu
 
+### ⚠️ Yön değişikliği: hedef = gerçek istasyon ölçümü (Faz 3.6–3.9)
+
+**Neden:** Hedef olarak kullanılan PM2.5 serisi CAMS atmosfer modelinin çıktısı. CAMS'ın kendisi
+de tahmin yayımladığı için "CAMS verisini tahmin etmek" gerçek dünyada anlamlı bir başarı ölçüsü
+değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **yerel istasyonda gerçekte
+ölçülecek** kirliliği tahmin etmek. Böylece CAMS verisi hedef değil, modelin güçlü bir girdisi olur.
+
+**Veri erişimi:** Bakanlık SİM "İstasyon Veri İndirme" sayfasının JSON uç noktaları
+(`data/fetch_sim.py`). 5 şehirde 104 istasyon, 47'si PM2.5 ölçüyor. Geçmiş hava tahmini
+(1 gün önceki model çalıştırması) Open-Meteo Previous Runs API'de 2024'ten beri tam mevcut.
+
+- [x] **3.6 İstasyon verisi toplama**
+  - Kapsam taraması: [`reports/istasyon_kapsami.md`](../reports/istasyon_kapsami.md).
+  - Seçim kuralı: kentsel alan, sanayi kaynaklı değil, tüm dönemde ve son yılda PM2.5 kapsamı
+    ≥ %80, şehir başına en fazla 2 → 8 istasyon (Ankara 2, Bursa 2, İstanbul 2, İzmir 1, Kocaeli 1).
+  - Saatlik PM2.5 + PM10, 2023-01-01'den bugüne; istasyon başına ~32.600 saat, PM2.5 doluluğu
+    %82–96. İstekler arasında 2 sn bekleme, her yanıt `data/raw/sim/hourly/` altında önbellekte.
+  - **İlk karşılaştırma (şehir merkezi CAMS değeri ile istasyon ölçümü):**
+
+    | İstasyon | Ort. istasyon | Ort. CAMS | Korelasyon | CAMS MAE | Persistence 24 s MAE | Uyarı % | CAMS uyarı recall |
+    |---|---|---|---|---|---|---|---|
+    | Ankara-Etimesgut | 9,2 | 19,6 | 0,34 | 13,1 | 5,5 | 4,1 | 0,45 |
+    | Ankara-Keçiören | 10,8 | 19,7 | 0,40 | 11,8 | 6,5 | 3,4 | 0,60 |
+    | Bursa | 25,2 | 15,9 | 0,30 | 14,0 | 13,7 | 21,5 | 0,11 |
+    | Bursa-Kültür Park | 24,8 | 16,0 | 0,34 | 12,9 | 13,5 | 19,6 | 0,13 |
+    | İstanbul-Sultangazi | 20,0 | 21,9 | 0,58 | 9,0 | 7,8 | 7,5 | 0,68 |
+    | İstanbul-Ümraniye | 14,0 | 21,7 | 0,62 | 9,5 | 5,8 | 2,7 | 0,81 |
+    | İzmir-Konak | 32,1 | 18,8 | 0,38 | 17,8 | 12,9 | 32,4 | 0,15 |
+    | Kocaeli | 22,6 | 17,7 | 0,49 | 9,3 | 9,5 | 14,6 | 0,20 |
+
+    CAMS yerel ölçümü zayıf temsil ediyor (korelasyon 0,30–0,62) ve şehre göre ters yönde
+    sapıyor (Ankara'da ~2 kat yüksek, Bursa/İzmir'de %35–40 düşük). Yerel model için alan büyük.
+- [ ] **3.7 İstasyon verisi kalitesi ve temizlik**
+  - Negatif/sıfır değerler, uç değerler (İzmir-Konak maks. 411 µg/m³), boşluk yapısı.
+  - **Zaman hizası:** istasyon–CAMS en yüksek korelasyonu 1–3 saat gecikmede veriyor ve şehre göre
+    değişiyor. SİM zaman damgası kuralı (saat başı/sonu, yerel/UTC) doğrulanmalı.
+  - CAMS ve hava durumu verisini şehir merkezi yerine istasyon koordinatlarından çekmek.
+- [ ] **3.8 Hava tahmini özellikleri**: Previous Runs API'den 1 gün önce yayımlanmış rüzgâr,
+  yağış, sıcaklık, nem, basınç tahmini (hedef saate hizalı). Eğitim 2024'ten itibaren.
+- [ ] **3.9 İstasyon hedefiyle geri test**: aynı walk-forward çerçevesi. Referans modeller:
+  istasyon persistence'ı, istasyon klimatolojisi ve **ham CAMS** (hedef anındaki CAMS değeri;
+  gerçek tahmin arşivi olmadığı için CAMS lehine iyimser bir referans).
+
 ## FAZ 4: İyileştirme, Değerlendirme, Açıklanabilirlik · ~1 hafta
 
 - [ ] **4.1 Deney takibi**: MLflow ile tüm denemelerin kaydı

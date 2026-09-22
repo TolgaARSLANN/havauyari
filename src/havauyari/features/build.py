@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 
 from havauyari.config import TARGET
+from havauyari.data.fetch_forecasts import FORECAST_DAY
 
 # --- PM2.5 geçmişi (Faz 2.1) -------------------------------------------------------------------
 # ACF: lag 1 ≈ 0,96, 12 saatte ~0,45'e düşüyor, 24 ve 168 saatte yeniden yükseliyor.
@@ -164,6 +165,66 @@ def add_horizon_features(df: pd.DataFrame, horizon: int, col: str = TARGET) -> p
     return df
 
 
+def add_weather_forecast(df: pd.DataFrame, horizon: int) -> pd.DataFrame:
+    """Geçmişte yayımlanmış day1 hava tahminlerinden (`fc_<değişken>`, geçerlilik zamanına göre
+    indeksli) t anında bilinen özellikler üretir. Faz 3.8.
+
+    Sızıntı kuralı: day1 tahmini geçerlilik anından en az 24 saat önce yayımlanır. t anında yalnızca
+    geçerlilik zamanı ≤ t+24 olan tahminler yayımlanmıştır; bu yüzden yalnızca (t, t+h] penceresi
+    kullanılır ve h ≤ 24 olmalıdır. Ham `fc_` sütunları özellik olarak bırakılmaz.
+    """
+    fc_cols = [c for c in df.columns if c.startswith("fc_")]
+    if not fc_cols:
+        return df
+    max_h = 24 * FORECAST_DAY
+    if horizon > max_h:
+        raise ValueError(f"day{FORECAST_DAY} tahminleri en fazla {max_h} saat ufuk için geçerli "
+                         f"(istenen: {horizon}). Daha uzun ufuk için previous_day2+ gerekir.")
+
+    h = horizon
+
+    def at_target(s: pd.Series) -> pd.Series:
+        return s.shift(-h)
+
+    def window(s: pd.Series, how: str) -> pd.Series:
+        """(t, t+h] penceresinin özeti, t satırına yazılır."""
+        return s.rolling(h, min_periods=1).agg(how).shift(-h)
+
+    fc = {c.removeprefix("fc_"): df[c] for c in fc_cols}
+    if "temperature_2m" in fc:
+        t = fc["temperature_2m"]
+        df["fc_tgt_temperature"] = at_target(t)
+        df["fc_win_temp_min"] = window(t, "min")
+        df["fc_win_temp_range"] = window(t, "max") - df["fc_win_temp_min"]
+        if "temperature_2m" in df:
+            df["fc_tgt_temp_change"] = df["fc_tgt_temperature"] - df["temperature_2m"]
+    if "wind_speed_10m" in fc:
+        ws = fc["wind_speed_10m"]
+        df["fc_tgt_wind_speed"] = at_target(ws)
+        df["fc_win_wind_mean"] = window(ws, "mean")
+        df["fc_win_wind_min"] = window(ws, "min")
+        calm = (ws < CALM_WIND_KMH).astype(float).where(ws.notna())
+        df["fc_win_calm_hours"] = window(calm, "sum")
+        if "wind_speed_10m" in df:
+            df["fc_tgt_wind_change"] = df["fc_tgt_wind_speed"] - df["wind_speed_10m"]
+        if "wind_direction_10m" in fc:
+            rad = np.deg2rad(fc["wind_direction_10m"])
+            df["fc_tgt_wind_u"] = at_target(ws * np.sin(rad))
+            df["fc_tgt_wind_v"] = at_target(ws * np.cos(rad))
+    if "precipitation" in fc:
+        df["fc_win_precip_sum"] = window(fc["precipitation"], "sum")
+    if "relative_humidity_2m" in fc:
+        df["fc_tgt_humidity"] = at_target(fc["relative_humidity_2m"])
+    if "surface_pressure" in fc:
+        df["fc_tgt_pressure"] = at_target(fc["surface_pressure"])
+        if "surface_pressure" in df:
+            df["fc_tgt_pressure_change"] = df["fc_tgt_pressure"] - df["surface_pressure"]
+    if "cloud_cover" in fc:
+        df["fc_tgt_cloud_cover"] = at_target(fc["cloud_cover"])
+        df["fc_win_cloud_mean"] = window(fc["cloud_cover"], "mean")
+    return df.drop(columns=fc_cols)
+
+
 def add_target(df: pd.DataFrame, horizon: int, col: str = TARGET) -> pd.DataFrame:
     df[f"target_h{horizon}"] = df[col].shift(-horizon)
     return df
@@ -177,6 +238,7 @@ def build_features(df: pd.DataFrame, horizon: int = 24, col: str = TARGET) -> pd
     out = add_pollutants(out)
     out = add_meteorology(out)
     out = add_horizon_features(out, horizon, col)
+    out = add_weather_forecast(out, horizon)
     out = add_target(out, horizon, col)
     return out
 

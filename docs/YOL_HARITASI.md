@@ -209,8 +209,24 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
     ve zirve öğleden sonra; CAMS ise gece 50 µg/m³ civarında. Saat hatası değil (ozon testi),
     ancak ölçüm düzeyi Ankara için şaşırtıcı derecede düşük. Sonuçlar istasyon bazında
     raporlanacak; Ankara sonuçları "düşük güven" olarak işaretlenecek.
-- [ ] **3.8 Hava tahmini özellikleri**: Previous Runs API'den 1 gün önce yayımlanmış rüzgâr,
+- [x] **3.8 Hava tahmini özellikleri**: Previous Runs API'den 1 gün önce yayımlanmış rüzgâr,
   yağış, sıcaklık, nem, basınç tahmini (hedef saate hizalı). Eğitim 2024'ten itibaren.
+  - Sonuç: `data/fetch_forecasts.py` (istasyon koordinatlarında day1 tahminleri, önbellekli),
+    `features.build.add_weather_forecast` (17 özellik), istasyon veri setine eklendi.
+  - Kapsam: sıcaklık 2023'ten, diğerleri 2024-01-19'dan itibaren; test döneminde %99,7 dolu.
+    2023 eğitim satırlarında bu özellikler boş (LightGBM boş değeri doğal olarak işler).
+  - **Tahmin kalitesi (ERA5'e göre, 2024-02 sonrası):** sıcaklık MAE 1,15 °C (r 0,99), nem 6,8 %,
+    rüzgâr 2,8 km/sa (r 0,80), basınç 0,45 hPa, yağış r 0,37. Tüm değişkenlerde en iyi eşleşme
+    0 saat gecikmede → zaman hizası doğru.
+  - **Sızıntı kuralı:** day1 tahmini geçerlilik anından ≥ 24 saat önce yayımlanır; t anında
+    yalnızca (t, t+h] penceresi kullanılıyor ve h ≤ 24 zorunlu (fazlası `ValueError`). Test:
+    pencere dışı tahminler/gelecek gözlemler bozulunca özellikler değişmiyor, pencere içi
+    tahminler bozulunca değişiyor (3 ufuk). Toplam 71 test.
+  - Özellikler: hedef anında sıcaklık/nem/rüzgâr u-v/basınç/bulut; (t, t+h] penceresinde yağış
+    toplamı, ort./min. rüzgâr, durgun saat sayısı, sıcaklık min./aralığı, ort. bulut; şu anki
+    gözleme göre sıcaklık, rüzgâr ve basınç değişimi.
+  - İlk sinyal: Bursa, kış 2025-26 — "önümüzdeki 24 s tahmini durgun saat" ile 24 s sonraki
+    istasyon PM2.5 korelasyonu 0,58 (CAMS'ın aynı istasyondaki korelasyonu 0,50).
 - [ ] **3.9 İstasyon hedefiyle geri test**: aynı walk-forward çerçevesi. Referans modeller:
   istasyon persistence'ı, istasyon klimatolojisi ve **ham CAMS** (hedef anındaki CAMS değeri;
   gerçek tahmin arşivi olmadığı için CAMS lehine iyimser bir referans).

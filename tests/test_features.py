@@ -58,6 +58,73 @@ def test_no_feature_uses_future_values(horizon):
     assert not a.loc[:t0, f"target_h{horizon}"].equals(b.loc[:t0, f"target_h{horizon}"])
 
 
+def _with_forecasts(df, seed=1):
+    rng = np.random.default_rng(seed)
+    n = len(df)
+    out = df.copy()
+    out["fc_temperature_2m"] = rng.uniform(-5, 35, n)
+    out["fc_relative_humidity_2m"] = rng.uniform(10, 100, n)
+    out["fc_wind_speed_10m"] = rng.uniform(0, 30, n)
+    out["fc_wind_direction_10m"] = rng.uniform(0, 360, n)
+    out["fc_precipitation"] = rng.choice([0.0, 0.0, 1.0], n)
+    out["fc_surface_pressure"] = rng.uniform(980, 1030, n)
+    out["fc_cloud_cover"] = rng.uniform(0, 100, n)
+    return out
+
+
+@pytest.mark.parametrize("horizon", [1, 6, 24])
+def test_forecast_features_respect_publication_window(horizon):
+    """Faz 3.8 sızıntı kuralı: t anında yalnızca (t, t+h] geçerlilikli day1 tahminleri kullanılır.
+
+    1) t0 sonrası gözlemler ve t0+h sonrası tahminler bozulursa t0 özellikleri DEĞİŞMEMELİ.
+    2) (t0, t0+h] içindeki tahminler bozulursa t0 özellikleri DEĞİŞMELİ (gerçekten kullanılıyor).
+    """
+    df = _with_forecasts(_full_frame())
+    t0 = df.index[400]
+    fc_cols = [c for c in df.columns if c.startswith("fc_")]
+    obs_cols = [c for c in df.columns if c not in fc_cols and c != "city"]
+
+    outside = df.copy()
+    outside.loc[outside.index > t0, obs_cols] *= 3
+    outside.loc[outside.index > t0 + pd.Timedelta(hours=horizon), fc_cols] *= 3
+    a, b = build_features(df, horizon), build_features(outside, horizon)
+    cols = feature_columns(a)
+    pd.testing.assert_frame_equal(a.loc[:t0, cols], b.loc[:t0, cols])
+
+    inside = df.copy()
+    win = (inside.index > t0) & (inside.index <= t0 + pd.Timedelta(hours=horizon))
+    inside.loc[win, fc_cols] = inside.loc[win, fc_cols] * 2 + 1
+    c = build_features(inside, horizon)
+    fc_feats = [x for x in cols if x.startswith("fc_")]
+    assert fc_feats and not a.loc[t0, fc_feats].equals(c.loc[t0, fc_feats])
+
+
+def test_forecast_window_semantics():
+    n = 60
+    idx = pd.date_range("2025-01-01", periods=n, freq="h")
+    df = pd.DataFrame({"city": "x", "pm2_5": 10.0, "temperature_2m": 5.0,
+                       "fc_precipitation": np.arange(n, dtype=float),
+                       "fc_temperature_2m": np.arange(n, dtype=float),
+                       "fc_wind_speed_10m": [2.0] * 30 + [10.0] * 30}, index=idx)
+    out = build_features(df, 6)
+    t = 20
+    assert out["fc_win_precip_sum"].iloc[t] == sum(range(t + 1, t + 7))   # (t, t+6]
+    assert out["fc_tgt_temperature"].iloc[t] == t + 6
+    assert out["fc_tgt_temp_change"].iloc[t] == t + 6 - 5.0
+    assert out["fc_win_temp_range"].iloc[t] == 5.0
+    assert out["fc_win_calm_hours"].iloc[t] == 6          # 21..26 < 4 km/sa
+    assert out["fc_win_calm_hours"].iloc[26] == 3         # 27,28,29 durgun; 30,31,32 değil
+    assert not any(c in out for c in ["fc_precipitation", "fc_temperature_2m"])  # ham sütun yok
+
+
+def test_forecast_horizon_limit():
+    df = _with_forecasts(_full_frame(100))
+    with pytest.raises(ValueError, match="en fazla 24"):
+        build_features(df, 48)
+    # Tahmin sütunu yoksa uzun ufuk sorun değil
+    assert "fc_tgt_temperature" not in build_features(_full_frame(100), 48)
+
+
 def test_all_expected_feature_groups_present():
     out = build_features(_full_frame(), 24)
     cols = set(feature_columns(out))

@@ -27,6 +27,7 @@ import pandas as pd
 
 from havauyari.config import PROCESSED_DIR, RAW_DIR, ROOT, City
 from havauyari.data.clean import clean as clean_openmeteo
+from havauyari.data.fetch_forecasts import FORECAST_VARS, forecast_column, station_forecasts
 from havauyari.data.fetch_openmeteo import fetch_city
 from havauyari.data.fetch_sim import SIM_DIR, SURVEY_PATH, select_stations, slugify
 from havauyari.reporting import to_markdown
@@ -109,6 +110,8 @@ def build_dataset() -> tuple[pd.DataFrame, pd.DataFrame]:
         # Ortak zaman aralığı: Open-Meteo arşivi birkaç gün geriden gelir
         df = om.join(sim.rename(columns={"PM25": "station_pm25", "PM10": "station_pm10"}),
                      how="inner")
+        # Geçmişte yayımlanmış day1 hava tahminleri (geçerlilik zamanına göre)
+        df = df.join(station_forecasts(st), how="left")
         df.insert(0, "city", st["city"])
         df.insert(0, "station", slug)
         frames.append(df)
@@ -124,6 +127,38 @@ def _lag_scan(target: pd.Series, cams: pd.Series, lags=range(-12, 13)) -> tuple[
     corr = {k: target.corr(cams.shift(k)) for k in lags}
     best = max(corr, key=corr.get)
     return best, corr[best], corr[0]
+
+
+def _mean_station_corr(d: pd.DataFrame, a: str, b: str, lag: int) -> float:
+    """İstasyon başına corr(a, b'nin `lag` saat kaydırılmışı) ortalaması.
+
+    Kaydırma her istasyonun kesintisiz saatlik serisi üzerinde yapılır (boşluklar atılmadan).
+    """
+    return float(np.mean([g[a].corr(g[b].shift(lag))
+                          for _, g in d.groupby("station", observed=True)]))
+
+
+def forecast_skill(data: pd.DataFrame) -> pd.DataFrame:
+    """Day1 tahminlerinin gerçekleşen ERA5 değerine göre hatası (2024-02 sonrası, tüm istasyonlar).
+
+    Gecikme taraması en iyi eşleşmenin 0 saatte olduğunu (zaman hizası doğru) göstermeli.
+    """
+    d = data[data.index >= "2024-02-01"]
+    rows = {}
+    for var in FORECAST_VARS:
+        fc = forecast_column(var)
+        if var not in d or fc not in d or var == "wind_direction_10m":
+            continue
+        pairs = d[[var, fc, "station"]].dropna()
+        lag_r = {k: _mean_station_corr(d, var, fc, k) for k in range(-3, 4)}
+        rows[var] = {"MAE": (pairs[fc] - pairs[var]).abs().mean(),
+                     "sapma (tahmin - gerçek)": (pairs[fc] - pairs[var]).mean(),
+                     "korelasyon": lag_r[0], "en iyi gecikme (s)": max(lag_r, key=lag_r.get),
+                     "dolu %": d[fc].notna().mean() * 100}
+    out = pd.DataFrame(rows).T
+    out["en iyi gecikme (s)"] = out["en iyi gecikme (s)"].astype(int)
+    out.index.name = "değişken"
+    return out
 
 
 def build_report(data: pd.DataFrame, cleaning: pd.DataFrame) -> str:
@@ -168,6 +203,14 @@ def build_report(data: pd.DataFrame, cleaning: pd.DataFrame) -> str:
         "Gecikme > 0: istasyon, CAMS'ın k saat önceki değeriyle en iyi eşleşiyor (CAMS erken).",
         "",
         to_markdown(comp, ".2f"),
+        "",
+        "## Hava tahmini (day1) kalitesi",
+        "",
+        "Open-Meteo Previous Runs API: geçerlilik anından en az 1 gün önce başlatılmış model "
+        "çalıştırması. Karşılaştırma: istasyon koordinatındaki ERA5 değeri, 2024-02 sonrası. "
+        "Sıcaklık 2023'ten, diğer değişkenler 2024-01-19'dan itibaren mevcut.",
+        "",
+        to_markdown(forecast_skill(data), ".2f"),
         "",
         "## Saat hizası kontrolü",
         "",

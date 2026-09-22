@@ -32,6 +32,18 @@ Gecikme > 0: istasyon, CAMS'ın k saat önceki değeriyle en iyi eşleşiyor (CA
 | izmir_konak | 32.13 | 18.77 | 0.58 | 0.38 | 1 | 0.40 | 22 | 22 | 32.41 |
 | kocaeli | 22.61 | 17.67 | 0.78 | 0.50 | 2 | 0.54 | 12 | 21 | 14.63 |
 
+## Hava tahmini (day1) kalitesi
+
+Open-Meteo Previous Runs API: geçerlilik anından en az 1 gün önce başlatılmış model çalıştırması. Karşılaştırma: istasyon koordinatındaki ERA5 değeri, 2024-02 sonrası. Sıcaklık 2023'ten, diğer değişkenler 2024-01-19'dan itibaren mevcut.
+
+| değişken | MAE | sapma (tahmin - gerçek) | korelasyon | en iyi gecikme (s) | dolu % |
+|---|---|---|---|---|---|
+| temperature_2m | 1.15 | -0.25 | 0.99 | 0 | 100.00 |
+| relative_humidity_2m | 6.84 | -0.02 | 0.90 | 0 | 100.00 |
+| wind_speed_10m | 2.82 | -0.74 | 0.80 | 0 | 100.00 |
+| precipitation | 0.08 | -0.03 | 0.37 | 0 | 100.00 |
+| surface_pressure | 0.45 | 0.03 | 0.99 | 0 | 100.00 |
+
 ## Saat hizası kontrolü
 
 Ozon fotokimyasal olarak öğleden sonra zirve yapar. Temmuz 2025 medyan profilinde Ankara-Keçiören istasyonunun ozon zirvesi 13:00, CAMS'ınki 13:00; ERA5 sıcaklık zirvesi 13–16 arası. SİM zaman damgaları yerel saattir ve kaydırma gerekmez. İstasyon ozon zirvesinin İstanbul/Bursa/Kocaeli'de CAMS'tan 2–4 saat geç olması, PM2.5'teki kaymayla aynı yönde: CAMS olayları sistematik olarak erken gösteriyor.

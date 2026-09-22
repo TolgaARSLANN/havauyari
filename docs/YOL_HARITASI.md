@@ -186,11 +186,29 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
 
     CAMS yerel ölçümü zayıf temsil ediyor (korelasyon 0,30–0,62) ve şehre göre ters yönde
     sapıyor (Ankara'da ~2 kat yüksek, Bursa/İzmir'de %35–40 düşük). Yerel model için alan büyük.
-- [ ] **3.7 İstasyon verisi kalitesi ve temizlik**
+- [x] **3.7 İstasyon verisi kalitesi ve temizlik**
   - Negatif/sıfır değerler, uç değerler (İzmir-Konak maks. 411 µg/m³), boşluk yapısı.
   - **Zaman hizası:** istasyon–CAMS en yüksek korelasyonu 1–3 saat gecikmede veriyor ve şehre göre
     değişiyor. SİM zaman damgası kuralı (saat başı/sonu, yerel/UTC) doğrulanmalı.
   - CAMS ve hava durumu verisini şehir merkezi yerine istasyon koordinatlarından çekmek.
+  - Sonuç: `data/stations.py` → `data/processed/stations.parquet` (8 istasyon × 32.544 saat) ve
+    [`reports/istasyon_veri_kalitesi.md`](../reports/istasyon_veri_kalitesi.md).
+  - **Saat hizası çözüldü:** SİM yerel saat kullanıyor (yerel 20:20'de son kayıt 20:00).
+    Kesin test ozon: fotokimyasal ozon öğleden sonra zirve yapar; Ankara-Keçiören istasyonunda
+    13:00, CAMS'ta 13:00 → istasyon saatleri doğru, kaydırma yapılmadı. Gecikme taraması ±12 saate
+    genişletilince istasyon CAMS'ın 1–6 saat gerisinde (İzmir 1, İstanbul/Kocaeli 2, Bursa 3–4,
+    Ankara 5–6); istasyon ozon zirvesi de CAMS'tan 2–4 saat geç. Sonuç: CAMS olayları sistematik
+    olarak erken gösteriyor. Model, CAMS'ın hedef öncesi saatlerini özellik olarak alıp bu kaymayı
+    öğrenecek (canlı sistemde CAMS'ın 4 günlük tahmini mevcut olduğu için gerçekçi).
+  - **Temizlik:** PM2.5 ≤ 0 (63 saat), ≥ 6 saat takılı değer (107 saat), tek saatlik sıçrama
+    (6 saat) → NaN. Hedef interpole edilmiyor. PM2.5 > PM10 (farklı cihazlar; Kocaeli'de 2.281
+    saat) düzeltilmeden raporlanıyor.
+  - **İstasyon koordinatının etkisi:** CAMS–istasyon korelasyonu şehir merkezi yerine istasyon
+    noktası kullanılınca yükseldi (Bursa 0,30 → 0,50, Ankara-Etimesgut 0,34 → 0,46).
+  - **Ankara notu:** iki Ankara istasyonunda kış gecesi değerleri çok düşük (medyan 7–9 µg/m³)
+    ve zirve öğleden sonra; CAMS ise gece 50 µg/m³ civarında. Saat hatası değil (ozon testi),
+    ancak ölçüm düzeyi Ankara için şaşırtıcı derecede düşük. Sonuçlar istasyon bazında
+    raporlanacak; Ankara sonuçları "düşük güven" olarak işaretlenecek.
 - [ ] **3.8 Hava tahmini özellikleri**: Previous Runs API'den 1 gün önce yayımlanmış rüzgâr,
   yağış, sıcaklık, nem, basınç tahmini (hedef saate hizalı). Eğitim 2024'ten itibaren.
 - [ ] **3.9 İstasyon hedefiyle geri test**: aynı walk-forward çerçevesi. Referans modeller:

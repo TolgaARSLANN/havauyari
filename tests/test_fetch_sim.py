@@ -37,6 +37,35 @@ def test_chunks_cover_range_without_gaps():
     assert len(parts) == 3
 
 
+def test_fetch_hourly_cache_roundtrip_keeps_numeric(tmp_path, monkeypatch):
+    """Önbellekten okunan parçalarda boş (None) değerler sütunu metne çevirmemeli."""
+    import havauyari.data.fetch_sim as fs
+
+    monkeypatch.setattr(fs, "SIM_DIR", tmp_path)
+
+    class FakeClient:
+        calls = 0
+
+        def measurements(self, ids, start, end, period, params):
+            FakeClient.calls += 1
+            t = pd.date_range(start, periods=3, freq="h")
+            pm10 = [None, None, None] if start.year == 2023 else [5.0, None, 7.0]
+            return rows_to_frame([{"ReadTime": str(x), "Stationid": ids[0], "PM25": 1.0,
+                                   "PM10": v} for x, v in zip(t, pm10, strict=True)], params)
+
+    st = pd.Series({"id": "abc"})
+    end = datetime(2024, 6, 1).date()
+    first = fs.fetch_hourly(FakeClient(), st, start="2023-01-01", end=end)
+    second = fs.fetch_hourly(FakeClient(), st, start="2023-01-01", end=end)  # önbellekten
+    for df in (first, second):
+        assert df["PM10"].dtype == float and df["PM25"].dtype == float
+        assert df.index.is_monotonic_increasing
+    # 1. çağrı: 2 parça indirilir. 2. çağrı: tamamlanmış parça önbellekten gelir, bitişi
+    # bugüne (end) denk gelen son parça yenilenir -> toplam 3 istek
+    assert FakeClient.calls == 3
+    pd.testing.assert_frame_equal(first, second, check_freq=False)
+
+
 def test_select_stations_rules():
     df = pd.DataFrame([
         # şehir, ad, alan, kaynak, kapsam, son yıl

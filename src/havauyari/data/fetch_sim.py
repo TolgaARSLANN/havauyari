@@ -253,12 +253,12 @@ def fetch_hourly(client: SimClient, station: pd.Series, start: str = START_DATE,
             df = client.measurements([station["id"]], c0, c1, HOURLY, PARAMETERS)
             rows = json.loads(df.to_json(orient="records", date_format="iso"))
             path.write_text(json.dumps(rows), encoding="utf-8")
-        frames.append(pd.DataFrame(rows))
-    df = pd.concat(frames, ignore_index=True)
-    df["time"] = pd.to_datetime(df["time"])
-    df = (df.drop_duplicates("time").set_index("time").sort_index()
-            .drop(columns="station_id", errors="ignore"))
-    return df
+        frames.append(rows_to_frame([{"ReadTime": r["time"], "Stationid": r["station_id"],
+                                      **{p: r.get(p) for p in PARAMETERS}} for r in rows],
+                                    PARAMETERS))
+    df = pd.concat([f for f in frames if not f.empty], ignore_index=True)
+    return (df.drop_duplicates("time").set_index("time").sort_index()
+              .drop(columns="station_id"))
 
 
 def main() -> None:

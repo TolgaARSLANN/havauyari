@@ -227,9 +227,37 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
     gözleme göre sıcaklık, rüzgâr ve basınç değişimi.
   - İlk sinyal: Bursa, kış 2025-26 — "önümüzdeki 24 s tahmini durgun saat" ile 24 s sonraki
     istasyon PM2.5 korelasyonu 0,58 (CAMS'ın aynı istasyondaki korelasyonu 0,50).
-- [ ] **3.9 İstasyon hedefiyle geri test**: aynı walk-forward çerçevesi. Referans modeller:
+- [x] **3.9 İstasyon hedefiyle geri test**: aynı walk-forward çerçevesi. Referans modeller:
   istasyon persistence'ı, istasyon klimatolojisi ve **ham CAMS** (hedef anındaki CAMS değeri;
   gerçek tahmin arşivi olmadığı için CAMS lehine iyimser bir referans).
+  - Çıktı: [`reports/backtest_istasyon_h24.md`](../reports/backtest_istasyon_h24.md)
+    (`python -m havauyari.models.train_station`), 501.000 hizalanmış tahmin satırı.
+  - İki model: **lgbm_gercekci** (CAMS yalnızca t'ye kadar + o gün yayımlanmış hava tahmini;
+    bugün uygulanabilir → alt sınır) ve **lgbm_iyimser** (+ CAMS'ın hedef anı; ham CAMS
+    referansıyla aynı avantaj → üst sınır). Tüm modeller aynı satırlarda ölçülür (`align_models`).
+
+  | Model | MAE | RMSE | Uyarı recall | Uyarı precision |
+  |---|---|---|---|---|
+  | lgbm_iyimser | 6,50 | 10,45 | 0,68 | 0,73 |
+  | **lgbm_gercekci** | **6,78** | **10,78** | **0,66** | **0,73** |
+  | moving_avg_24 | 9,09 | 14,12 | 0,57 | 0,61 |
+  | persistence | 9,09 | 14,51 | 0,60 | 0,60 |
+  | climatology | 10,30 | 17,03 | 0,05 | 0,36 |
+  | cams_scaled | 11,15 | 17,32 | 0,41 | 0,47 |
+  | seasonal_naive_7d | 11,61 | 18,32 | 0,49 | 0,49 |
+  | cams_raw | 12,95 | 19,73 | 0,25 | 0,36 |
+
+  - **Ana sonuç:** gerçekçi model ham CAMS'a göre MAE'de %47,7, en iyi basit referansa göre
+    %25,4 daha iyi. Uyarı recall'ü 0,25 (CAMS) → 0,66; precision aynı anda 0,36 → 0,73.
+    Yani hem daha çok uyarı yakalanıyor hem daha az yanlış alarm veriliyor.
+  - **İyimser ile fark küçük** (MAE 6,50 vs 6,78): model, CAMS'ın gelecek değerlerine bağımlı
+    değil; kazancın çoğu istasyon geçmişi + hava tahmininden geliyor. Canlı sistemde gerçek CAMS
+    tahmini kullanıldığında sonucun bu iki değer arasında kalması beklenir.
+  - Ankara'nın iki düşük güvenli istasyonu çıkarıldığında tablo değişmiyor (gerçekçi model
+    MAE 7,51 vs ham CAMS 13,30; recall 0,67 vs 0,24).
+  - **Dürüstlük notu:** havuzlanmış recall, uyarının sık olduğu istasyonlara ağırlık verir.
+    İstasyon bazında recall 0,14 (İstanbul-Ümraniye, uyarı oranı %2,7) ile 0,79 (İzmir-Konak)
+    arasında değişiyor. Faz 4.4'te istasyon bazlı eşik ayarı gerekecek.
 
 ## FAZ 4: İyileştirme, Değerlendirme, Açıklanabilirlik · ~1 hafta
 

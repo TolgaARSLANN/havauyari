@@ -34,11 +34,12 @@ LGBM_PARAMS = dict(n_estimators=500, learning_rate=0.05, num_leaves=63, subsampl
                    subsample_freq=1, colsample_bytree=0.8, random_state=0, verbose=-1)
 
 
-def lightgbm_predictor(horizon: int, params: dict | None = None) -> Predictor:
+def lightgbm_predictor(horizon: int, params: dict | None = None,
+                       realistic: bool = False) -> Predictor:
     target = f"target_h{horizon}"
 
     def predict(train: pd.DataFrame, test: pd.DataFrame) -> np.ndarray:
-        cols = feature_columns(train)
+        cols = feature_columns(train, realistic=realistic)
         model = lgb.LGBMRegressor(**(params or LGBM_PARAMS))
         model.fit(train[cols], train[target])
         return model.predict(test[cols])

@@ -3,22 +3,26 @@
 [![CI](https://github.com/TolgaARSLANN/havauyari/actions/workflows/ci.yml/badge.svg)](https://github.com/TolgaARSLANN/havauyari/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 
-Türkiye'nin büyük şehirleri için **PM2.5 konsantrasyonunu 24-72 saat önceden tahmin eden**, tahmini AQI kategorisine çeviren ve sağlıksız seviyeler için **erken uyarı** üreten uçtan uca bir makine öğrenmesi projesi.
+Türkiye şehirlerindeki hava kalitesi izleme istasyonlarında **24 saat sonra ölçülecek PM2.5 değerini tahmin eden**, tahmini AQI kategorisine çeviren ve sağlıksız seviyeler için **erken uyarı** üreten uçtan uca bir makine öğrenmesi projesi.
 
-> 🚧 Geliştirme aşamasında: veri ve keşif aşaması tamamlandı, modelleme sürüyor. Ayrıntılı plan: [docs/YOL_HARITASI.md](docs/YOL_HARITASI.md)
+> 🚧 Geliştirme aşamasında: veri, keşif ve modelleme tamamlandı; servis ve arayüz sürüyor. Ayrıntılı plan: [docs/YOL_HARITASI.md](docs/YOL_HARITASI.md)
 
 ## Problem
-Hava kirliliği, özellikle kış aylarında Türkiye şehirlerinde ciddi bir halk sağlığı sorunudur. Mevcut ölçüm sistemleri çoğunlukla *şu anki* durumu gösterir. HavaUyarı ise *yarın ne olacağını* tahmin ederek hassas grupların (astım hastaları, yaşlılar, çocuklar) önlem almasına yardımcı olmayı hedefler.
+Hava kirliliği, özellikle kış aylarında Türkiye şehirlerinde ciddi bir halk sağlığı sorunudur. Mevcut sistemler çoğunlukla *şu anki* durumu gösterir. HavaUyarı *yarın ne olacağını* tahmin ederek hassas grupların (astım hastaları, yaşlılar, çocuklar) önlem almasına yardımcı olmayı hedefler.
+
+Avrupa'nın CAMS atmosfer modeli zaten hava kalitesi tahmini yayımlıyor, ancak ~11 km çözünürlüğü yerel gerçeği zayıf yansıtıyor: istasyon ölçümleriyle korelasyonu 0,30–0,64 ve sapması şehirden şehre ters yönde (Ankara'da yüksek, Bursa ve İzmir'de düşük tahmin). **Bu proje, genel modeli yerel istasyon ölçümleri ve hava tahminiyle düzelterek gerçek ölçüme yakın bir erken uyarı üretiyor.**
 
 ## Veri
-| Kaynak | İçerik |
-|---|---|
-| [Open-Meteo Air Quality API](https://open-meteo.com/en/docs/air-quality-api) (CAMS) | Saatlik PM2.5, PM10, NO₂, O₃, CO, SO₂ |
-| [Open-Meteo Historical Weather API](https://open-meteo.com/en/docs/historical-weather-api) (ERA5) | Sıcaklık, nem, rüzgâr, basınç, yağış |
+| Kaynak | Rol | İçerik |
+|---|---|---|
+| **Çevre Bakanlığı SİM** (sim.csb.gov.tr) | **Hedef** | 8 kentsel istasyonda saatlik PM2.5 ölçümü |
+| [Open-Meteo Air Quality API](https://open-meteo.com/en/docs/air-quality-api) (CAMS) | Girdi | İstasyon koordinatında PM2.5, PM10, NO₂, O₃, CO, SO₂ |
+| [Open-Meteo Previous Runs API](https://open-meteo.com/en/docs/previous-runs-api) | Girdi | *O gün yayımlanmış* 1 günlük hava tahminleri |
+| [Open-Meteo Historical Weather API](https://open-meteo.com/en/docs/historical-weather-api) (ERA5) | Girdi | Gerçekleşen sıcaklık, nem, rüzgâr, basınç, yağış |
 
-- **Şehirler:** İstanbul, Ankara, İzmir, Bursa, Kocaeli
-- **Kapsam:** 2023-01-01 → 2026-09-17, saatlik, şehir başına 32.544 saat (toplam 162.720 satır)
-- **Kalite:** Eksik saat, boş ya da fiziksel sınır dışı değer yok. PM2.5 > PM10 olan 76 saat düzeltildi. Ayrıntılar: [reports/veri_kalite_raporu.md](reports/veri_kalite_raporu.md)
+- **Şehirler:** İstanbul, Ankara, İzmir, Bursa, Kocaeli · **Kapsam:** 2023-01-01 → bugün, saatlik
+- **İstasyon seçimi:** 104 istasyon tarandı, 47'si PM2.5 ölçüyor; kentsel, sanayi kaynaklı olmayan ve verisi ≥ %80 eksiksiz olanlardan şehir başına en fazla 2 istasyon seçildi ([kapsam raporu](reports/istasyon_kapsami.md))
+- **Kalite:** Ölçülmemiş saatler hedef olarak kullanılmaz, tahminle doldurulmaz. Temizlik kuralları ve saat hizası doğrulaması: [istasyon veri kalitesi](reports/istasyon_veri_kalitesi.md), [CAMS veri kalitesi](reports/veri_kalite_raporu.md)
 
 ## Veriden Öğrendiklerimiz
 Tam analiz: [notebooks/01_eda.ipynb](notebooks/01_eda.ipynb)
@@ -41,11 +45,12 @@ Tam analiz: [notebooks/01_eda.ipynb](notebooks/01_eda.ipynb)
 </p>
 
 ## Yaklaşım
-- **Özellikler (79):** PM2.5 geçmişi (1 saat–1 hafta lag'ler, kayan istatistikler, hedef saatle hizalı geçmiş değerler), diğer kirleticilerin geçmişi, meteoroloji (rüzgâr vektörü ve durgunluk, yağış birikimi, ısıtma derece-saati, basınç ve sıcaklık değişimi), takvim ve Türkiye resmî tatilleri. Hedef anının saati ve tatil bilgisi önceden bilindiği için ayrıca kullanılır. Bir sızıntı testi, gelecek verinin hiçbir özelliğe karışmadığını doğrular.
-- **Baseline modeller:** Persistence, Seasonal Naive (haftalık), 24 saatlik hareketli ortalama, klimatoloji (şehir × ay × saat medyanı)
-- **Model:** LightGBM (direkt çok-ufuklu tahmin)
-- **Doğrulama:** Son 1 yıl üzerinde 12 aylık walk-forward geri test (genişleyen eğitim penceresi + arındırma), böylece her mevsim test edilir. Rastgele split kullanılmaz.
-- **Metrikler:** MAE, RMSE, sMAPE + uyarı sınıfı için **recall** (kaçırılan alarm en kritik hata)
+- **Özellikler (~100):** istasyon ölçümünün geçmişi (1 saat–1 hafta lag'ler, kayan istatistikler, hedef saatle hizalı geçmiş değerler), CAMS kirleticileri, meteoroloji (rüzgâr vektörü ve durgunluk, yağış birikimi, ısıtma derece-saati, basınç ve sıcaklık değişimi), takvim ve Türkiye resmî tatilleri, **o gün yayımlanmış hava tahmininden** üretilen 17 özellik (önümüzdeki 24 saatin yağış toplamı, durgun saat sayısı, en düşük rüzgâr vb.)
+- **Sızıntıya karşı:** Eksik saatler yalnızca geçmiş değerle doldurulur, hedef hiç doldurulmaz. Testler, belirli bir andan sonraki veri değiştirildiğinde hiçbir özelliğin değişmediğini doğrular. Hava tahminlerinde yalnızca yayımlanmış olan pencere kullanılır.
+- **Baseline modeller:** Persistence, bir hafta önceki aynı saat, 24 saatlik hareketli ortalama, klimatoloji (istasyon × ay × saat medyanı), ham CAMS ve ölçeklenmiş CAMS
+- **Model:** LightGBM
+- **Doğrulama:** Son 1 yıl üzerinde 12 aylık walk-forward geri test (genişleyen eğitim penceresi + arındırma), böylece her mevsim test edilir. Rastgele split kullanılmaz; tüm modeller aynı satırlarda karşılaştırılır.
+- **Metrikler:** MAE, RMSE, sMAPE + uyarı sınıfı için **recall** (kaçırılan alarm en kritik hata) ve precision
 - **AQI:** US EPA 2024 PM2.5 eşikleri. Ana uyarı eşiği 35,5 µg/m³ (hassas gruplar için sağlıksız)
 
 ## Kurulum ve Çalıştırma
@@ -54,12 +59,18 @@ Linux / macOS / WSL üzerinde:
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
-make data      # veriyi indir          -> data/raw/
-make quality   # veri kalite raporu    -> reports/veri_kalite_raporu.md
-make process   # temizle               -> data/processed/
-make baselines # referans modellerle hızlı geri test (~10 sn)
-make train     # referans modeller + LightGBM geri testi -> reports/backtest_h24.md (~3 dk)
-make test      # birim testleri
+# Ana akış: istasyon hedefi
+make sim-survey    # SİM istasyonlarını tara -> reports/istasyon_kapsami.md
+make sim-data      # seçili istasyonların saatlik ölçümleri
+make forecasts     # geçmişte yayımlanmış hava tahminleri
+make stations      # birleşik veri seti + kalite raporu
+make train-station # istasyon hedefli geri test -> reports/backtest_istasyon_h24.md
+
+# Yan akış: CAMS hedefli ilk kurulum (karşılaştırma için korunuyor)
+make data quality process
+make train
+
+make test          # birim testleri (80)
 ```
 
 ## Proje Yapısı
@@ -78,17 +89,23 @@ tests/          # birim testleri (AQI, temizlik, sızıntı kontrolü, metrikler
 ```
 
 ## Sonuçlar
-24 saat sonrası PM2.5 tahmini, son 1 yıl (2025-09-23 → 2026-09-18) üzerinde 12 aylık walk-forward geri test, 5 şehir, model başına 43.080 tahmin. Uyarı = PM2.5 ≥ 35,5 µg/m³.
+**Hedef: istasyonda 24 saat sonra ölçülecek PM2.5.** Son 1 yıl (2025-09-23 → 2026-09-18), 12 aylık walk-forward geri test, 8 istasyon, 501.000 tahmin. Tüm modeller aynı satırlarda ölçülür. Uyarı = PM2.5 ≥ 35,5 µg/m³.
 
-| Model | MAE | RMSE | Kış MAE | Uyarı recall | Uyarı precision |
-|---|---|---|---|---|---|
-| Seasonal naive (1 hafta önce) | 9,98 | 15,78 | 14,73 | 0,40 | 0,40 |
-| Hareketli ortalama (24 s) | 9,03 | 14,12 | 15,10 | 0,29 | 0,37 |
-| Klimatoloji (şehir × ay × saat) | 7,98 | 12,92 | 12,36 | 0,14 | 0,67 |
-| Persistence ("yarın da bugün gibi") | 7,43 | 12,32 | 12,04 | **0,52** | 0,52 |
-| **LightGBM** | **6,75** | **10,80** | **10,65** | 0,42 | **0,62** |
+| Model | MAE | RMSE | Uyarı recall | Uyarı precision |
+|---|---|---|---|---|
+| **HavaUyarı (uygulanabilir)** | **6,78** | **10,78** | **0,66** | **0,73** |
+| HavaUyarı (üst sınır) | 6,50 | 10,45 | 0,68 | 0,73 |
+| Hareketli ortalama (24 s) | 9,09 | 14,12 | 0,57 | 0,61 |
+| Persistence ("yarın da bugün gibi") | 9,09 | 14,51 | 0,60 | 0,60 |
+| Klimatoloji (istasyon × ay × saat) | 10,30 | 17,03 | 0,05 | 0,36 |
+| CAMS (istasyon ortalamasına ölçeklenmiş) | 11,15 | 17,32 | 0,41 | 0,47 |
+| Bir hafta önceki aynı saat | 11,61 | 18,32 | 0,49 | 0,49 |
+| **Ham CAMS** | 12,95 | 19,73 | 0,25 | 0,36 |
 
-LightGBM ortalama hatada en iyi referans modelden **%9,2** daha iyi, ancak uyarıların daha azını yakalıyor: ortalama hatayı küçülten model zirveleri bastırıyor. Sıradaki adımlar (gelecek hava tahmini özelliği, uyarı eşiği ayarı) bu açığı hedefliyor. Ayrıntılı rapor: [reports/backtest_h24.md](reports/backtest_h24.md)
+- Ortalama hata ham CAMS'a göre **%47,7**, en iyi basit referansa göre **%25,4** daha düşük.
+- Uyarıların yakalanma oranı 0,25'ten **0,66'ya** çıkarken isabet de 0,36'dan **0,73'e** yükseliyor: hem daha çok uyarı yakalanıyor hem daha az yanlış alarm veriliyor.
+- **Uygulanabilirlik:** Ana model yalnızca bugün erişilebilen verileri kullanır (istasyon geçmişi, CAMS'ın şu ana kadarki değerleri, o gün yayımlanmış hava tahmini). "Üst sınır" modeli ek olarak CAMS'ın gelecek değerlerini görür; aradaki farkın küçük olması, sonucun CAMS'ın tahmin başarısına bağımlı olmadığını gösteriyor.
+- İstasyon ve mevsim kırılımları: [reports/backtest_istasyon_h24.md](reports/backtest_istasyon_h24.md)
 
 ## Yol Haritası
 Ayrıntılı alt fazlar ve alınan kararlar: [docs/YOL_HARITASI.md](docs/YOL_HARITASI.md)
@@ -97,7 +114,9 @@ Ayrıntılı alt fazlar ve alınan kararlar: [docs/YOL_HARITASI.md](docs/YOL_HAR
 - [x] Veri toplama, kalite raporu, temizlik
 - [x] Keşifsel veri analizi (EDA)
 - [x] Özellik mühendisliği (meteoroloji, tatiller, diğer kirleticiler)
-- [ ] Modelleme: baseline'lar, LightGBM, 24/48/72 saat ufukları
+- [x] Gerçek istasyon ölçümlerine geçiş (SİM) ve hava tahmini özellikleri
+- [x] Modelleme ve geri test: ham CAMS'a göre MAE %47,7 daha düşük
+- [ ] Uyarı eşiği ayarı (istasyon bazında), hata analizi, SHAP
 - [ ] Optuna, MLflow, hata analizi, SHAP, tahmin aralıkları
 - [ ] FastAPI (`/forecast/{city}`, `/alerts`)
 - [ ] Streamlit panosu + Türkiye haritası
@@ -105,9 +124,10 @@ Ayrıntılı alt fazlar ve alınan kararlar: [docs/YOL_HARITASI.md](docs/YOL_HAR
 - [ ] Hugging Face Spaces'e deploy
 
 ## Sınırlamalar
-- **Veri bir model çıktısı, istasyon ölçümü değil.** Kirletici değerleri CAMS atmosfer modelinden (~11 km çözünürlük) geliyor. Proje fiilen bu modelin çıktısını tahmin ediyor. Gerçek istasyon ölçümleriyle (Çevre Bakanlığı SİM) karşılaştırma ileride yapılacak.
-- **Yerel kirlilik kaçabilir.** Kış kirliliğiyle bilinen Bursa'da veride mevsimsellik çok zayıf (kış/yaz oranı 1,18). Model çözünürlüğü yerel kaynakları yakalayamıyor olabilir.
-- **Nadir olaylar.** "Sağlıksız" (≥ 55,5 µg/m³) saatler Bursa ve Kocaeli'de %0,5'in altında; bu seviyede uyarı performansı sınırlı kalabilir.
+- **Uyarı yakalama istasyondan istasyona değişiyor.** Havuzlanmış recall (0,66), uyarının sık görüldüğü istasyonlara ağırlık verir. İstasyon bazında 0,14 (İstanbul-Ümraniye, uyarı oranı %2,7) ile 0,79 (İzmir-Konak) arasında değişiyor. İstasyon bazlı eşik ayarı planlanıyor.
+- **Ankara istasyonları düşük güvenli.** İki Ankara istasyonunda kış gecesi ölçümleri şüpheli derecede düşük. Bunlar çıkarıldığında genel sonuç değişmiyor, sonuçlar ayrıca raporlanıyor.
+- **CAMS karşılaştırması CAMS lehine iyimser.** Geçmiş CAMS tahmin arşivi açık olmadığı için CAMS'ın analiz değerleri kullanıldı; gerçek bir 24 saatlik CAMS tahmini bundan daha hatalı olurdu.
+- **Kapsam:** 5 şehirde 8 istasyon ve tek tahmin ufku (24 saat). Daha uzun ufuklar için 2+ günlük tahmin arşivi gerekiyor.
 
 ## Sorumluluk Reddi
 Bu proje eğitim ve portföy amaçlıdır. Tahminler resmi hava kalitesi uyarılarının yerine geçmez ve sağlık tavsiyesi değildir.

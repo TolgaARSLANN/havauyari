@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from havauyari.evaluation.backtest import (
+    align_models,
     in_test_window,
     in_train_window,
     make_folds,
@@ -49,7 +50,7 @@ def test_purge_keeps_training_targets_before_test(horizon):
 def test_run_backtest_shapes_and_truth():
     feats = _frame()
     folds = make_folds(feats.index, n_folds=3, test_days=10)
-    preds = run_backtest(feats, H, {"persistence": persistence}, folds)
+    preds = run_backtest(feats, H, {"persistence": persistence()}, folds)
     assert len(preds) == 3 * 10 * 24 * 2 - H * 2  # son H saatin hedefi yok
     assert set(preds["fold"]) == {0, 1, 2}
     row = preds.iloc[100]
@@ -100,3 +101,19 @@ def test_baseline_set():
     assert set(baseline_predictors(24)) == {"persistence", "moving_avg_24", "climatology",
                                             "seasonal_naive_7d"}
     assert "seasonal_naive_7d" not in baseline_predictors(200)
+    with_cams = baseline_predictors(24, col="station_pm25", group="station", with_cams=True)
+    assert {"cams_raw", "cams_scaled"} <= set(with_cams)
+
+
+def test_align_models_keeps_only_rows_where_every_model_predicts():
+    preds = pd.DataFrame({
+        "time": pd.to_datetime(["2025-01-01 00:00", "2025-01-01 00:00", "2025-01-01 01:00",
+                                "2025-01-01 01:00"]),
+        "station": ["a", "a", "a", "a"],
+        "model": ["m1", "m2", "m1", "m2"],
+        "y_true": [1.0, 1.0, 2.0, 2.0],
+        "y_pred": [1.0, np.nan, 2.0, 2.5],   # 00:00'da m2 tahmin üretememiş
+    })
+    out = align_models(preds, group_col="station")
+    assert out["time"].dt.hour.tolist() == [1, 1]
+    assert set(out["model"]) == {"m1", "m2"}

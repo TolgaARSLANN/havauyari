@@ -249,6 +249,67 @@ def build_all_cities(df: pd.DataFrame, horizon: int = 24) -> pd.DataFrame:
     return pd.concat(parts)
 
 
-def feature_columns(df: pd.DataFrame) -> list[str]:
-    """Modele girecek sütunlar: şehir adı ve hedefler hariç her şey."""
-    return [c for c in df.columns if c != "city" and not c.startswith("target_")]
+# ---------------------------------------------------------------------------------------------
+# İstasyon hedefi (Faz 3.9)
+# ---------------------------------------------------------------------------------------------
+STATION_TARGET = "station_pm25"
+CAMS_COL = "pm2_5"
+CAMS_TGT_LAGS = [1, 2, 3, 4, 5, 6]
+FEATURE_FFILL_HOURS = 3
+
+
+def add_cams_forecast(df: pd.DataFrame, horizon: int, col: str = CAMS_COL) -> pd.DataFrame:
+    """CAMS'ın hedef anı (t+h) ve öncesindeki değerleri: canlı sistemdeki CAMS tahmininin vekili.
+
+    UYARI (İYİMSER): geçmiş CAMS tahmin arşivi olmadığından CAMS'ın analiz değerleri kullanılır.
+    Canlı sistemde bu değerler CAMS'ın 24-48 saatlik tahmininden gelecek ve daha hatalı olacak.
+    Bu yüzden bu özelliklerle eğitilen model bir üst sınırdır; `cams_` önekli sütunlar gerçekçi
+    modelde kullanılmaz. İstasyonun CAMS'tan 1-6 saat geç tepki vermesi (Faz 3.7) nedeniyle
+    hedeften önceki 6 saat de eklenir.
+    """
+    h = horizon
+    s = df[col]
+    df["cams_tgt"] = s.shift(-h)
+    for k in CAMS_TGT_LAGS:
+        if k < h:
+            df[f"cams_tgt_lag{k}"] = s.shift(k - h)
+    df["cams_win_mean"] = s.rolling(h, min_periods=1).mean().shift(-h)
+    df["cams_win_max"] = s.rolling(h, min_periods=1).max().shift(-h)
+    return df
+
+
+def build_station_features(g: pd.DataFrame, horizon: int = 24,
+                           col: str = STATION_TARGET) -> pd.DataFrame:
+    """Tek istasyonun saatlik tablosundan özellikler + `target_h{horizon}` (ham ölçüm).
+
+    - Özelliklerde istasyon serisinin boşlukları yalnızca GEÇMİŞ değerle (ileri taşıma, en fazla
+      3 saat) doldurulur; interpolasyon sonraki ölçümü kullanacağı için sızıntı olurdu.
+    - Hedef hiç doldurulmaz: yalnızca gerçekten ölçülmüş saatler hedef olur.
+    """
+    raw = g[col]
+    work = g.copy()
+    work[col] = raw.ffill(limit=FEATURE_FFILL_HOURS)
+    out = build_features(work, horizon, col=col)
+    out = add_cams_forecast(out, horizon)
+    out[f"target_h{horizon}"] = raw.shift(-horizon)
+    return out
+
+
+def build_all_stations(df: pd.DataFrame, horizon: int = 24) -> pd.DataFrame:
+    parts = [build_station_features(g, horizon)
+             for _, g in df.groupby("station", sort=False, observed=True)]
+    return pd.concat(parts)
+
+
+NON_FEATURES = {"city", "station"}
+
+
+def feature_columns(df: pd.DataFrame, realistic: bool = False) -> list[str]:
+    """Modele girecek sütunlar: birim adları ve hedefler hariç her şey.
+
+    realistic=True: CAMS'ın gelecek değerlerini (`cams_` önekli, iyimser vekil) dışarıda bırakır.
+    """
+    cols = [c for c in df.columns if c not in NON_FEATURES and not c.startswith("target_")]
+    if realistic:
+        cols = [c for c in cols if not c.startswith("cams_")]
+    return cols

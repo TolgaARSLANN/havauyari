@@ -51,7 +51,8 @@ def in_test_window(index: pd.DatetimeIndex, fold: Fold) -> np.ndarray:
 
 
 def run_backtest(feats: pd.DataFrame, horizon: int, predictors: dict[str, Predictor],
-                 folds: list[Fold], verbose: bool = False) -> pd.DataFrame:
+                 folds: list[Fold], verbose: bool = False,
+                 group_col: str = "city") -> pd.DataFrame:
     """Her fold ve model için test tahminlerini üretir. Dönüş: uzun biçimli tahmin tablosu."""
     target = f"target_h{horizon}"
     feats = feats.dropna(subset=[target])
@@ -63,7 +64,7 @@ def run_backtest(feats: pd.DataFrame, horizon: int, predictors: dict[str, Predic
             continue
         for name, predict in predictors.items():
             pred = np.asarray(predict(train, test), dtype=float)
-            parts.append(pd.DataFrame({
+            part = pd.DataFrame({
                 "time": test.index,
                 "target_time": test.index + pd.Timedelta(hours=horizon),
                 "city": test["city"].to_numpy(),
@@ -71,13 +72,28 @@ def run_backtest(feats: pd.DataFrame, horizon: int, predictors: dict[str, Predic
                 "model": name,
                 "y_true": test[target].to_numpy(),
                 "y_pred": pred,
-            }))
+            })
+            if group_col != "city":
+                part.insert(3, group_col, test[group_col].to_numpy())
+            parts.append(part)
         if verbose:
             print(f"  fold {fold.number:2d}: {fold.test_start:%Y-%m-%d} → {fold.test_end:%Y-%m-%d}"
                   f"  eğitim={len(train):,}  test={len(test):,}")
     preds = pd.concat(parts, ignore_index=True)
     preds["season"] = preds["target_time"].dt.month.map(SEASON_OF_MONTH)
     return preds
+
+
+def align_models(preds: pd.DataFrame, group_col: str = "city") -> pd.DataFrame:
+    """Yalnızca TÜM modellerin tahmin ürettiği (zaman, birim) satırlarını tutar.
+
+    Eksik veride bazı referans modeller tahmin üretemez (örn. son 24 saat boşsa hareketli
+    ortalama). Her model farklı satır kümesinde ölçülürse karşılaştırma adil olmaz.
+    """
+    ok = preds.assign(_ok=preds["y_pred"].notna())
+    n_models = preds["model"].nunique()
+    full = ok.groupby(["time", group_col], observed=True)["_ok"].transform("sum") == n_models
+    return preds[full.to_numpy()].reset_index(drop=True)
 
 
 def summarize(preds: pd.DataFrame, by: list[str] | None = None) -> pd.DataFrame:

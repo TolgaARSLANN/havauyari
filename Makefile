@@ -1,4 +1,4 @@
-.PHONY: install data quality process train test lint
+.PHONY: install data quality process train baselines test lint
 
 install:
 	pip install -e ".[dev,ml,serve]"
@@ -13,7 +13,10 @@ process:
 	python -m havauyari.data.clean
 
 train:
-	python -m havauyari.models.train --horizon 24 --folds 4
+	python -m havauyari.models.train --horizon 24
+
+baselines:
+	python -m havauyari.models.train --horizon 24 --baselines-only
 
 test:
 	pytest -q

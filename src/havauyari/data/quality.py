@@ -17,6 +17,7 @@ import pandas as pd
 
 from havauyari.alerts.aqi import PM25_BREAKPOINTS
 from havauyari.config import PHYSICAL_LIMITS, RAW_DIR, ROOT, TARGET
+from havauyari.reporting import to_markdown as _md
 
 REPORT_PATH = ROOT / "reports" / "veri_kalite_raporu.md"
 
@@ -86,22 +87,6 @@ def aqi_level_rates(s: pd.Series) -> pd.Series:
     for c_lo, _c_hi, _i_lo, _i_hi, name in PM25_BREAKPOINTS[1:]:
         rates[f"≥{c_lo} ({name})"] = (s >= c_lo).mean() * 100
     return pd.Series(rates)
-
-
-def _md(df: pd.DataFrame | pd.Series, floatfmt: str = ".1f") -> str:
-    if isinstance(df, pd.Series):
-        df = df.to_frame()
-    df = df.copy()
-    for c in df.columns:
-        if pd.api.types.is_float_dtype(df[c]):
-            df[c] = df[c].map(lambda v: "" if pd.isna(v) else format(v, floatfmt))
-    header = "| " + " | ".join([str(df.index.name or "")] + [str(c) for c in df.columns]) + " |"
-    sep = "|" + "---|" * (len(df.columns) + 1)
-    rows = [
-        "| " + " | ".join([str(i)] + [str(v) for v in r]) + " |"
-        for i, r in zip(df.index, df.values, strict=True)
-    ]
-    return "\n".join([header, sep, *rows])
 
 
 def _per_city(frames: dict[str, pd.DataFrame], fn, index_name: str = "şehir") -> pd.DataFrame:

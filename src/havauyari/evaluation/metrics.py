@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 from sklearn.metrics import f1_score, precision_score, recall_score
 
-from havauyari.alerts.aqi import UNHEALTHY_INDEX, category_index
+from havauyari.alerts.aqi import ALERT_INDEX, threshold_concentration
 
 
 def _clean(y_true, y_pred):
@@ -27,15 +27,20 @@ def regression_metrics(y_true, y_pred) -> dict[str, float]:
     }
 
 
-def alert_metrics(y_true, y_pred, threshold_index: int = UNHEALTHY_INDEX) -> dict[str, float]:
+def exceeds(conc, threshold_index: int = ALERT_INDEX) -> np.ndarray:
+    """Konsantrasyon eşik kategorisine ulaşıyor mu? EPA kuralı: 0,1'e aşağı yuvarlanır."""
+    c = np.floor(np.asarray(conc, float) * 10 + 1e-9) / 10
+    return c >= threshold_concentration(threshold_index)
+
+
+def alert_metrics(y_true, y_pred, threshold_index: int = ALERT_INDEX) -> dict[str, float]:
     """Gerçek ve tahmin konsantrasyonlarını 'uyarı var/yok' ikili sınıfına çevirip ölçer.
 
     Erken uyarıda kaçırılan alarm (false negative) en pahalı hatadır, bu yüzden recall ana
     metriktir.
     """
     t, p = _clean(y_true, y_pred)
-    t_alert = np.array([category_index(v) >= threshold_index for v in t])
-    p_alert = np.array([category_index(v) >= threshold_index for v in p])
+    t_alert, p_alert = exceeds(t, threshold_index), exceeds(p, threshold_index)
     kw = {"zero_division": 0}
     return {
         "alert_recall": float(recall_score(t_alert, p_alert, **kw)),

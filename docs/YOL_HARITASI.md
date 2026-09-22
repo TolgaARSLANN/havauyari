@@ -131,11 +131,26 @@ Toplam süre tahmini: ~7 hafta (haftada 10-15 saat).
 
 ## FAZ 3: Modelleme · ~1 hafta
 
-- [ ] **3.1 Walk-forward doğrulama çerçevesi** (mevcut, fold sayısı ve test penceresi sabitlenir)
-- [ ] **3.2 Baseline sonuçları**: Persistence, Seasonal Naive, hareketli ortalama → ilk sonuç tablosu
-- [ ] **3.3 İlk LightGBM modeli** (24 saat ufku)
+- [x] **3.1 Walk-forward doğrulama çerçevesi** (mevcut, fold sayısı ve test penceresi sabitlenir)
+  - Sonuç: `evaluation/backtest.py`. Son 12 × 30 gün (2025-09-23 → 2026-09-18) test ediliyor,
+    genişleyen eğitim penceresi, **arındırma** (hedefi test dönemine düşen eğitim satırları
+    çıkarılıyor; eski kodda son 24 saatin etiketleri test dönemine sızıyordu), birleştirilmiş
+    metrikler ve mevsim/şehir kırılımları.
+  - Ana uyarı eşiği kodda 35,5 µg/m³ olarak sabitlendi (`aqi.ALERT_INDEX`), 55,5 ikinci kademe.
+  - Çıktı: `reports/backtest_h24.md` (`make train`), tahminler `data/processed/preds_h24.parquet`.
+- [x] **3.2 Baseline sonuçları**: Persistence, Seasonal Naive, hareketli ortalama → ilk sonuç tablosu
+  - Eklenen referans: **klimatoloji** (eğitim verisinde şehir × ay × saat medyanı).
+  - En iyi referans persistence (MAE 7,43); klimatoloji MAE'de yakın (7,98) ama uyarıların
+    yalnızca %14'ünü yakalıyor.
+- [x] **3.3 İlk LightGBM modeli** (24 saat ufku)
   - Bitti sayılır: baseline'dan daha iyi MAE
+  - Sonuç: MAE 6,75 → persistence'tan **%9,2 iyi**; her mevsimde ve her şehirde daha iyi.
+    12 pencerenin 11'inde önde (Haziran 2026 penceresinde geride).
+  - **Zayıf nokta:** uyarı recall 0,42 (persistence 0,52), ≥ 55,5 recall 0,28 (persistence
+    0,43). Precision daha yüksek (0,62 vs 0,52): model temkinli, zirveleri bastırıyor.
+    Faz 3.5 (hava tahmini) ve Faz 4.4 (eşik/quantile) bunu hedefleyecek.
 - [ ] **3.4 Çoklu ufuk**: 24 / 48 / 72 saat. Direkt ve recursive yöntem karşılaştırması
+  - Sıra değişikliği: Faz 3.5'teki hava tahmini deneyi 3.4'ten önce yapılacak (Faz 2 sonucu).
 - [ ] **3.5 Alternatif modeller**: Ridge, Random Forest, (opsiyonel) Prophet / LSTM, gelecek hava tahmini deneyi
   - Çıktı: `notebooks/03_modeling.ipynb` + model karşılaştırma tablosu
 

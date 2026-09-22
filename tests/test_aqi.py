@@ -1,6 +1,13 @@
 import pytest
 
-from havauyari.alerts.aqi import aqi_category, is_alert, pm25_to_aqi
+from havauyari.alerts.aqi import (
+    ALERT_INDEX,
+    UNHEALTHY_INDEX,
+    aqi_category,
+    is_alert,
+    pm25_to_aqi,
+    threshold_concentration,
+)
 
 
 @pytest.mark.parametrize(
@@ -19,8 +26,13 @@ def test_truncation_not_rounding():
 
 def test_category_and_alert():
     assert aqi_category(20) == "Orta"
-    assert not is_alert(50)
-    assert is_alert(60)
+    # Ana uyarı eşiği 35,5 (hassas gruplar için sağlıksız)
+    assert threshold_concentration(ALERT_INDEX) == 35.5
+    assert not is_alert(35.49)
+    assert is_alert(35.5)
+    # İkinci kademe 55,5
+    assert not is_alert(50, UNHEALTHY_INDEX)
+    assert is_alert(60, UNHEALTHY_INDEX)
 
 
 def test_invalid_input():

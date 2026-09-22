@@ -20,7 +20,18 @@ PM25_BREAKPOINTS: list[tuple[float, float, int, int, str]] = [
 ]
 
 CATEGORIES = [bp[4] for bp in PM25_BREAKPOINTS]
+SENSITIVE_INDEX = CATEGORIES.index("Hassas gruplar için sağlıksız")
 UNHEALTHY_INDEX = CATEGORIES.index("Sağlıksız")
+
+# Ana uyarı eşiği: 35,5 µg/m³. "Sağlıksız" (55,5) saatler Bursa/Kocaeli'de %0,5'in altında olduğu
+# için güvenilir öğrenilemez; hassas grupları korumak da projenin amacı (EDA, 12. bölüm).
+# 55,5 ikinci kademe uyarı olarak ayrıca raporlanır.
+ALERT_INDEX = SENSITIVE_INDEX
+
+
+def threshold_concentration(index: int) -> float:
+    """Kategorinin alt sınırı (µg/m³). Örn. SENSITIVE_INDEX -> 35.5"""
+    return PM25_BREAKPOINTS[index][0]
 
 
 def pm25_to_aqi(conc: float) -> int:
@@ -46,6 +57,6 @@ def category_index(conc: float) -> int:
     return CATEGORIES.index(aqi_category(conc))
 
 
-def is_alert(conc: float, threshold_index: int = UNHEALTHY_INDEX) -> bool:
+def is_alert(conc: float, threshold_index: int = ALERT_INDEX) -> bool:
     """Tahmin edilen değer eşik kategorisine veya üstüne çıkıyorsa uyarı üret."""
     return category_index(conc) >= threshold_index

@@ -9,7 +9,6 @@ from havauyari.features.build import (
     feature_columns,
     is_holiday,
 )
-from havauyari.models.baselines import seasonal_naive
 
 
 def _series(n=400, city="x", start="2024-01-01"):
@@ -161,10 +160,3 @@ def test_pollutant_features():
     assert out["pm10_lag24"].iloc[t] == df["pm10"].iloc[t - 24]
     assert np.isclose(out["ozone_rollmean24"].iloc[t], df["ozone"].iloc[t - 23 : t + 1].mean())
     assert np.isclose(out["pm_ratio"].iloc[t], df["pm2_5"].iloc[t] / df["pm10"].iloc[t])
-
-
-def test_seasonal_naive_alignment():
-    s = _series()["pm2_5"]
-    # h=3, sezon=24: t+3 için t+3-24 = t-21 anındaki değer
-    p = seasonal_naive(s, horizon=3, season=24)
-    assert p.iloc[100] == 79

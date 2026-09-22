@@ -42,9 +42,9 @@ Tam analiz: [notebooks/01_eda.ipynb](notebooks/01_eda.ipynb)
 
 ## Yaklaşım
 - **Özellikler (79):** PM2.5 geçmişi (1 saat–1 hafta lag'ler, kayan istatistikler, hedef saatle hizalı geçmiş değerler), diğer kirleticilerin geçmişi, meteoroloji (rüzgâr vektörü ve durgunluk, yağış birikimi, ısıtma derece-saati, basınç ve sıcaklık değişimi), takvim ve Türkiye resmî tatilleri. Hedef anının saati ve tatil bilgisi önceden bilindiği için ayrıca kullanılır. Bir sızıntı testi, gelecek verinin hiçbir özelliğe karışmadığını doğrular.
-- **Baseline modeller:** Persistence, Seasonal Naive (haftalık), 24 saatlik hareketli ortalama
+- **Baseline modeller:** Persistence, Seasonal Naive (haftalık), 24 saatlik hareketli ortalama, klimatoloji (şehir × ay × saat medyanı)
 - **Model:** LightGBM (direkt çok-ufuklu tahmin)
-- **Doğrulama:** Walk-forward (zamana göre ileri kayan) doğrulama; test pencereleri kış aylarını da kapsar. Rastgele split kullanılmaz.
+- **Doğrulama:** Son 1 yıl üzerinde 12 aylık walk-forward geri test (genişleyen eğitim penceresi + arındırma), böylece her mevsim test edilir. Rastgele split kullanılmaz.
 - **Metrikler:** MAE, RMSE, sMAPE + uyarı sınıfı için **recall** (kaçırılan alarm en kritik hata)
 - **AQI:** US EPA 2024 PM2.5 eşikleri. Ana uyarı eşiği 35,5 µg/m³ (hassas gruplar için sağlıksız)
 
@@ -57,7 +57,8 @@ pip install -e ".[dev]"
 make data      # veriyi indir          -> data/raw/
 make quality   # veri kalite raporu    -> reports/veri_kalite_raporu.md
 make process   # temizle               -> data/processed/
-make train     # baseline vs LightGBM karşılaştırması
+make baselines # referans modellerle hızlı geri test (~10 sn)
+make train     # referans modeller + LightGBM geri testi -> reports/backtest_h24.md (~3 dk)
 make test      # birim testleri
 ```
 
@@ -77,13 +78,17 @@ tests/          # birim testleri (AQI, temizlik, sızıntı kontrolü, metrikler
 ```
 
 ## Sonuçlar
-_Walk-forward doğrulama tamamlandığında buraya eklenecek._
+24 saat sonrası PM2.5 tahmini, son 1 yıl (2025-09-23 → 2026-09-18) üzerinde 12 aylık walk-forward geri test, 5 şehir, model başına 43.080 tahmin. Uyarı = PM2.5 ≥ 35,5 µg/m³.
 
-| Model | MAE (24s) | RMSE | Alarm Recall |
-|---|---|---|---|
-| Persistence | – | – | – |
-| Seasonal Naive | – | – | – |
-| **LightGBM** | – | – | – |
+| Model | MAE | RMSE | Kış MAE | Uyarı recall | Uyarı precision |
+|---|---|---|---|---|---|
+| Seasonal naive (1 hafta önce) | 9,98 | 15,78 | 14,73 | 0,40 | 0,40 |
+| Hareketli ortalama (24 s) | 9,03 | 14,12 | 15,10 | 0,29 | 0,37 |
+| Klimatoloji (şehir × ay × saat) | 7,98 | 12,92 | 12,36 | 0,14 | 0,67 |
+| Persistence ("yarın da bugün gibi") | 7,43 | 12,32 | 12,04 | **0,52** | 0,52 |
+| **LightGBM** | **6,75** | **10,80** | **10,65** | 0,42 | **0,62** |
+
+LightGBM ortalama hatada en iyi referans modelden **%9,2** daha iyi, ancak uyarıların daha azını yakalıyor: ortalama hatayı küçülten model zirveleri bastırıyor. Sıradaki adımlar (gelecek hava tahmini özelliği, uyarı eşiği ayarı) bu açığı hedefliyor. Ayrıntılı rapor: [reports/backtest_h24.md](reports/backtest_h24.md)
 
 ## Yol Haritası
 Ayrıntılı alt fazlar ve alınan kararlar: [docs/YOL_HARITASI.md](docs/YOL_HARITASI.md)

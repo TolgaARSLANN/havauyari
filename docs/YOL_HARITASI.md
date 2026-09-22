@@ -63,9 +63,19 @@ Toplam süre tahmini: ~7 hafta (haftada 10-15 saat).
     `fill_short_gaps` yalnızca ≤ 3 saatlik boşlukları dolduruyor (testli).
   - Not (Faz 3.1 için): son 30 günlük tek test penceresinde (Ağu-Eyl) hiç uyarı saati yok,
     alarm metrikleri anlamsız kalıyor → walk-forward pencereleri kış aylarını da kapsamalı.
-- [ ] **1.4 EDA notebook'u** (`notebooks/01_eda.ipynb`)
+- [x] **1.4 EDA notebook'u** (`notebooks/01_eda.ipynb`)
   - Çıktı: saatlik/haftalık/yıllık desenler, kış ısınma etkisi, rüzgâr–PM2.5 ilişkisi,
     şehir karşılaştırması, kirleticiler arası korelasyon, otokorelasyon (ACF/PACF)
+  - Sonuç: 11 bölüm + özet tablo; grafikler `reports/figures/` altında.
+  - Sonraki fazlara aktarılan kararlar (gerekçeler notebook'un 12. bölümünde):
+    - Faz 2: rüzgâr hızı kayan ortalaması + durgun saat sayısı, yağış 3/6/24 s toplamı,
+      diğer kirleticilerin (PM10, NO₂, SO₂, CO) geçmiş değerleri, resmî tatiller.
+      Diğer şehirlerin geçmişi düşük öncelik (24 s gecikmede korelasyon 0,31–0,42).
+    - Faz 3: test pencereleri kışı kapsamalı, metrikler mevsime göre de raporlanmalı;
+      ham hedef ile `log1p` hedef karşılaştırılmalı (çarpıklık 1,4–3,2 → 0,0–0,7).
+    - Faz 3.5 önceliği yükseldi: 24 s sonraki uyarıların %37–64'ü şu an uyarı olmayan saatlerden
+      geliyor; başlangıcı yakalamak için gelecek hava tahmini özelliği gerekli olabilir.
+    - Ana uyarı eşiği önerisi: 35,5 µg/m³; 55,5 ikinci kademe (Faz 4.4'te kesinleşecek).
 - [ ] **1.5 Bulguların özeti**
   - Çıktı: README'ye 3-5 maddelik "Veriden öğrendiklerimiz" + 2-3 grafik
 

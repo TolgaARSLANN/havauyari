@@ -22,15 +22,21 @@ Toplam süre tahmini: ~7 hafta (haftada 10-15 saat).
 - [x] **0.4 Git + GitHub**
   - Çıktı: `git init`, ilk commit, GitHub'da public repo, SSH anahtarı
   - Bitti sayılır: `git push` çalışıyor, repo GitHub'da görünüyor
-- [ ] **0.5 Editör bağlantısı**
+- [x] **0.5 Editör bağlantısı**
   - Çıktı: VS Code + WSL eklentisi (`code .` ile açılıyor)
-- [ ] **0.6 Ortam doğrulama**
+  - Not: Claude Code masaüstü uygulaması doğrudan `\\wsl.localhost\Ubuntu-24.04\...` klasöründe çalışıyor; VS Code isteğe bağlı.
+- [x] **0.6 Ortam doğrulama**
   - Bitti sayılır: `pytest -q` → 19/19 test geçiyor, `ruff check` temiz, GitHub Actions CI yeşil
 
 ## FAZ 1: Veri Toplama ve Keşif (EDA) · ~1 hafta
 
-- [ ] **1.1 Ham veri indirme**
+- [x] **1.1 Ham veri indirme**
   - Çıktı: `data/raw/*.parquet` (5 şehir × 2023'ten bugüne saatlik)
+  - Sonuç: 5 şehir × 32.544 saat (2023-01-01 → 2026-09-17), tekrar eden veya eksik saat yok,
+    12 değişkenin hiçbirinde boş değer yok.
+  - Not: Kirletici değerleri istasyon ölçümü değil, CAMS atmosfer modelinin çıktısı
+    (~11 km çözünürlük). Bu yüzden seri kesintisiz ve pürüzsüz; README'de sınırlama olarak belirtilecek.
+    Gerçek ölçümlerle karşılaştırma için SİM verisi Faz 4.3'te değerlendirilebilir.
 - [ ] **1.2 Veri kalite raporu**
   - Çıktı: eksik veri oranı, en uzun boşluklar, aykırı değerler, zaman damgası tutarlılığı (yaz saati yok ama kontrol et)
 - [ ] **1.3 Temizlik**

@@ -37,8 +37,23 @@ Toplam süre tahmini: ~7 hafta (haftada 10-15 saat).
   - Not: Kirletici değerleri istasyon ölçümü değil, CAMS atmosfer modelinin çıktısı
     (~11 km çözünürlük). Bu yüzden seri kesintisiz ve pürüzsüz; README'de sınırlama olarak belirtilecek.
     Gerçek ölçümlerle karşılaştırma için SİM verisi Faz 4.3'te değerlendirilebilir.
-- [ ] **1.2 Veri kalite raporu**
+- [x] **1.2 Veri kalite raporu**
   - Çıktı: eksik veri oranı, en uzun boşluklar, aykırı değerler, zaman damgası tutarlılığı (yaz saati yok ama kontrol et)
+  - Sonuç: [`reports/veri_kalite_raporu.md`](../reports/veri_kalite_raporu.md) (`python -m havauyari.data.quality`)
+  - Bulgular ve 1.3 için kararlar:
+    - Eksik değer, fiziksel sınır dışı değer, tekrar eden saat yok.
+    - Şehir başına 7-28 saatte PM2.5 > PM10 (fiziksel olarak imkânsız, model yuvarlaması)
+      → 1.3'te PM2.5, PM10 ile sınırlanacak.
+    - Ani sıçramalar (İstanbul 288 saat / 90 gün) gerçek olaylar: PM2.5/PM10 oranı sıçramalarda
+      0.80, genelde 0.72 → yanma kaynaklı (kışın ısınma, yazın orman yangını dumanı).
+      Uyarı sisteminin yakalaması gereken olaylar oldukları için **silinmeyecek**.
+    - Ozonda 14-15 saatlik sabit koşular var (gece, tam sayı yuvarlaması); dokunulmayacak.
+    - Güçlü mevsimsellik (Ankara Ocak medyanı Temmuz'un ~3 katı) ve günlük döngü (öğlen düşük,
+      21:00-00:00 zirve) → takvim ve saat özellikleri kritik.
+    - Bursa'da mevsimsellik neredeyse yok; CAMS'ın ~11 km çözünürlüğü yerel kış kirliliğini
+      kaçırıyor olabilir → README sınırlamalarına eklenecek.
+    - Şehirler arası günlük korelasyon 0.43-0.75 → bölgesel etkiler var; diğer şehirlerin geçmiş
+      değerleri Faz 2'de özellik olarak denenebilir.
 - [ ] **1.3 Temizlik**
   - Çıktı: `data/processed/all_cities.parquet`
   - Bitti sayılır: saatlik frekans kesintisiz, negatif değer yok

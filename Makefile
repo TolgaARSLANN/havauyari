@@ -1,10 +1,13 @@
-.PHONY: install data process train test lint
+.PHONY: install data quality process train test lint
 
 install:
 	pip install -e ".[dev,ml,serve]"
 
 data:
 	python -m havauyari.data.fetch_openmeteo
+
+quality:
+	python -m havauyari.data.quality
 
 process:
 	python -m havauyari.data.clean

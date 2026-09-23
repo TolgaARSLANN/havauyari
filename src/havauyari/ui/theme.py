@@ -99,9 +99,23 @@ def css(t: Tokens) -> str:
   --hu-radius:12px; --hu-space-1:4px; --hu-space-2:8px; --hu-space-3:12px; --hu-space-4:16px;
   --hu-space-6:24px; --hu-space-8:32px;
 }}
-html, body, [class*="st-"], .stMarkdown, .stText, button, input, select, textarea {{
+/* Yazı tipi: ikon öğeleri HARİÇ. Streamlit ikonları "Material Symbols" yazı tipinin
+   bitişik harfleriyle çizer ("keyboard_arrow_right" -> ok); bu yazı tipi ezilirse ikon adı
+   düz metin olarak görünür ve başlıkla çakışır. */
+html, body, .stApp,
+.stApp :is(p, li, label, a, h1, h2, h3, h4, h5, h6, button, input, select, textarea, td, th, div,
+           span:not([data-testid="stIconMaterial"])) {{
   font-family: 'Fira Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }}
+[data-testid="stIconMaterial"], .material-symbols-rounded {{
+  font-family: 'Material Symbols Rounded' !important; font-weight: normal; font-style: normal;
+  letter-spacing: normal; text-transform: none; white-space: nowrap;
+}}
+/* Genel kuraldaki span:not(...) önceliği (0,2,1) olduğu için sayı yazı tipi !important ister */
+.stApp :is(code, pre, .hu-kpi-value, .hu-station-value, .hu-hero-value) {{
+  font-family: 'Fira Code', ui-monospace, monospace !important;
+}}
+.stApp .hu-unit {{ font-family: 'Fira Sans', system-ui, sans-serif !important; }}
 .block-container {{ max-width: 1240px; padding-top: 1.5rem; padding-bottom: 3rem; }}
 #MainMenu, footer, [data-testid="stToolbarActions"] {{ visibility: hidden; }}
 h1, h2, h3, h4 {{ font-weight: 650; letter-spacing: -0.01em; color: var(--hu-text); }}
@@ -136,7 +150,7 @@ h1, h2, h3, h4 {{ font-weight: 650; letter-spacing: -0.01em; color: var(--hu-tex
 .hu-kpi-sub {{ font-size:0.85rem; color:var(--hu-muted); margin-top:4px; }}
 
 .hu-grid {{ display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
-  gap:var(--hu-space-3); }}
+  gap:var(--hu-space-3); margin-bottom:var(--hu-space-4); }}
 .hu-station {{ transition: border-color 200ms ease, box-shadow 200ms ease; }}
 .hu-station:hover {{ border-color:var(--hu-data); box-shadow:0 1px 8px rgba(15,23,42,.08); }}
 .hu-station-head {{ display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }}
@@ -184,11 +198,39 @@ h1, h2, h3, h4 {{ font-weight: 650; letter-spacing: -0.01em; color: var(--hu-tex
 .hu-footer {{ margin-top:var(--hu-space-8); padding-top:var(--hu-space-4);
   border-top:1px solid var(--hu-border); font-size:0.82rem; color:var(--hu-muted); line-height:1.6; }}
 
-/* --- Sekmeler ------------------------------------------------------------------------ */
-.stTabs [data-baseweb="tab-list"] {{ gap:4px; border-bottom:1px solid var(--hu-border); }}
-.stTabs [data-baseweb="tab"] {{ height:44px; padding:0 16px; font-weight:500; }}
-.stTabs [aria-selected="true"] {{ color:var(--hu-data); }}
-.stTabs [data-baseweb="tab-highlight"] {{ background-color:var(--hu-data); }}
+/* --- Sekmeler: segmentli kontrol + kayan seçim zemini ------------------------------------
+   Streamlit 1.64 sekmeleri react-aria ile çizer. Tek bir SelectionIndicator öğesi seçili
+   sekmeye 'translate' geçişiyle taşınır; onu alt çizgi yerine sekmenin arkasındaki "hap"
+   zemine dönüştürüyoruz, böylece seçim sekmeler arasında kayar (mekânsal süreklilik). */
+[data-testid="stTabs"] [role="tablist"] {{
+  display:inline-flex; gap:4px; padding:4px; width:auto; max-width:100%;
+  background:var(--hu-surface-alt); border:1px solid var(--hu-border); border-radius:12px;
+  overflow-x:auto; scrollbar-width:none; margin-bottom:var(--hu-space-4);
+}}
+[data-testid="stTabs"] [role="tablist"]::-webkit-scrollbar {{ display:none; }}
+[data-testid="stTab"] {{
+  position:relative; height:40px; padding:0 16px; border-radius:9px; cursor:pointer;
+  color:var(--hu-muted); white-space:nowrap; transition:color 200ms ease, background-color 200ms ease;
+}}
+[data-testid="stTab"] > :not(.react-aria-SelectionIndicator) {{ position:relative; z-index:1; }}
+[data-testid="stTab"] p {{ font-weight:500; color:inherit; margin:0; font-size:0.92rem; }}
+[data-testid="stTab"]:hover:not([data-selected="true"]) {{
+  color:var(--hu-text); background:color-mix(in srgb, var(--hu-surface) 55%, transparent);
+}}
+[data-testid="stTab"][data-selected="true"] {{ color:var(--hu-data); }}
+[data-testid="stTab"][data-selected="true"] p {{ font-weight:600; }}
+[data-testid="stTab"] [data-testid="stIconMaterial"] {{ font-size:1.15rem; }}
+.stApp [data-testid="stTabs"] [data-testid="stTab"] .react-aria-SelectionIndicator {{
+  position:absolute !important; inset:0 !important; width:auto !important; height:auto !important;
+  z-index:0 !important; border-radius:9px !important;
+  background:var(--hu-surface) !important;
+  box-shadow:0 1px 2px rgba(15,23,42,.10), 0 1px 3px rgba(15,23,42,.06) !important;
+  transition:translate 280ms cubic-bezier(.2,.8,.2,1) !important;
+}}
+/* Panel: sekme değişince içerik kısa bir belirme + hafif yukarı kayma ile gelir */
+@keyframes hu-panel-in {{ from {{ opacity:0; transform:translateY(6px); }}
+                         to {{ opacity:1; transform:none; }} }}
+[data-testid="stTabPanel"]:not([inert]) {{ animation:hu-panel-in 240ms cubic-bezier(.2,.8,.2,1); }}
 [data-testid="stPlotlyChart"], [data-testid="stDataFrame"] {{
   border:1px solid var(--hu-border); border-radius:var(--hu-radius); padding:6px;
   background:var(--hu-surface); }}

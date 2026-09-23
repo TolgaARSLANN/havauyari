@@ -107,7 +107,8 @@ header_slot.markdown(header_html(issued, stale, T), unsafe_allow_html=True)
 
 ordered = sorted(forecasts, key=lambda s: forecasts[s]["pm25"], reverse=True)
 tab_overview, tab_station, tab_model, tab_about = st.tabs(
-    ["Genel bakış", "İstasyon detayı", "Model performansı", "Hakkında"])
+    [":material/map: Genel bakış", ":material/location_on: İstasyon detayı",
+     ":material/insights: Model performansı", ":material/info: Hakkında"])
 
 # --- Genel bakış -----------------------------------------------------------------------------
 with tab_overview:

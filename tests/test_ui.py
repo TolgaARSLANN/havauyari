@@ -80,6 +80,16 @@ def test_theme_tokens_and_contrast():
         assert contrast(CATEGORY_TEXT_COLORS[cat], bg) >= 4.5, cat
 
 
+def test_css_keeps_icon_font():
+    """Yazı tipi kuralı Streamlit'in ikon öğelerini ezmemeli (ikon adı metin olarak görünür)."""
+    from havauyari.ui.theme import LIGHT, css
+
+    c = css(LIGHT)
+    assert 'span:not([data-testid="stIconMaterial"])' in c
+    assert "'Material Symbols Rounded' !important" in c
+    assert '[class*="st-"]' not in c                  # eski, ikonları da ezen geniş seçici
+
+
 def test_html_fragments_escape_and_label():
     from havauyari.ui.components import category_chip, flags_html, range_html
 
@@ -98,8 +108,10 @@ def test_streamlit_app_renders_with_fake_service(service, monkeypatch):
     at = AppTest.from_file(str(APP), default_timeout=60)
     at.run()
     assert not at.exception, at.exception
-    assert [t.label for t in at.tabs] == ["Genel bakış", "İstasyon detayı",
-                                          "Model performansı", "Hakkında"]
+    labels = [t.label for t in at.tabs]
+    for expected, label in zip(["Genel bakış", "İstasyon detayı", "Model performansı",
+                                "Hakkında"], labels, strict=True):
+        assert label.endswith(expected), label
     body = " ".join(m.value for m in at.markdown)
     for text in ("HavaUyarı", "Hedef zaman", "Uyarı riski", "hu-station", "için tahmin",
                  "Bu tahmin neden böyle?"):

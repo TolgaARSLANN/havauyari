@@ -65,15 +65,23 @@ def threshold_for_recall(y_true, y_pred, target: float = TARGET_RECALL,
 
 
 def walk_forward_thresholds(preds: pd.DataFrame, eval_folds: list[int],
-                            target: float = TARGET_RECALL) -> dict[int, float]:
-    """Her değerlendirme penceresi için eşik: yalnızca daha önceki pencerelerin tahminleri."""
+                            target: float = TARGET_RECALL,
+                            grid: np.ndarray = GRID) -> dict[int, float]:
+    """Her değerlendirme penceresi için eşik: yalnızca daha önceki pencerelerin tahminleri.
+
+    `grid`, tahminin ölçeğine uygun olmalıdır: konsantrasyon (µg/m³) için GRID, olasılık
+    üreten bir sınıflandırıcı için PROBABILITY_GRID.
+    """
     out = {}
     for k in eval_folds:
         past = preds[preds["fold"] < k]
         if past.empty:
             raise ValueError(f"Pencere {k} için geçmiş tahmin yok")
-        out[k] = threshold_for_recall(past["y_true"], past["y_pred"], target)
+        out[k] = threshold_for_recall(past["y_true"], past["y_pred"], target, grid)
     return out
+
+
+PROBABILITY_GRID = np.round(np.arange(0.01, 1.0, 0.01), 2)
 
 
 def apply_thresholds(preds: pd.DataFrame, thresholds: dict[int, float]) -> pd.DataFrame:

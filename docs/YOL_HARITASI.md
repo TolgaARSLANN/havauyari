@@ -263,6 +263,19 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
 
 - [ ] **4.1 Deney takibi**: MLflow ile tüm denemelerin kaydı
 - [ ] **4.2 Hiperparametre araması**: Optuna (walk-forward skoru üzerinden)
+  - [x] **Zirve bastırma deneyi** (`models/experiments.py`,
+    [`reports/deney_zirve_h24.md`](../reports/deney_zirve_h24.md)): log hedef, Tweedie kaybı,
+    yüksek değerlere ağırlık, doğrudan uyarı sınıflandırıcısı; hepsi aynı 24 aylık protokolle
+    (walk-forward eşik, recall ≥ %80) karşılaştırıldı. Deney kaydı: `reports/deney_kaydi.csv`.
+  - **Sonuç: hiçbir aday mevcut L2 modelini geçmedi** (precision 0,572, F1 0,676). Log hedef ve
+    Tweedie MAE'yi hafifçe düşürdü (6,73–6,77) ama zirve sapmasını KÖTÜLEŞTİRDİ (−26,6 / −28,8)
+    ve aynı recall hedefinde precision 0,526'ya indi. Ağırlıklı eğitim sapmayı ancak −23,0 →
+    −22,0 iyileştirdi. Sınıflandırıcı L2 ile aynı F1'e ulaştı (0,676).
+  - **Çıkarım:** zirve bastırma bir kayıp fonksiyonu sorunu değil, **bilgi sınırı**: 24 saat
+    önceden elimizdeki verilerle ani yükselişlerin büyüklüğü öngörülemiyor (bkz. Bursa 14 Ocak
+    2026). Kaldıraç kayıp fonksiyonunda değil, daha iyi girdide: canlı sistemde gerçek CAMS
+    tahmini, istasyonlar arası sinyal, daha uzun meteorolojik bağlam. L2 modeli korunuyor.
+  - Yan bulgu: ayarlı eşikle (28,5) yeni başlayan uyarıların yakalanma oranı %34 → %61.
 - [x] **4.3 Hata analizi**: şehir / mevsim / saat / ufuk bazında hata, en kötü 10 dönem incelemesi
   - İstasyon hedefli ana model (`lgbm_gercekci`) üzerinde yapıldı:
     [`reports/hata_analizi_istasyon_h24.md`](../reports/hata_analizi_istasyon_h24.md)

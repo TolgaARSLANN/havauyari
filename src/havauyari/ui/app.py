@@ -1,4 +1,5 @@
-"""HavaUyarı panosu (Faz 6; tasarım sistemi: ui/theme.py).
+"""HavaUyarı panosu (Faz 6). Tasarım dili: "Parçacık Defteri" (ui/theme.py,
+docs/tasarim/parcacik-defteri.md). PM2.5 değeri noktaların yoğunluğuyla gösterilir.
 
 Metinler TDK Yazım Kılavuzu'na göre yazılmıştır: saat biçimi "14.00", ay adları yazıyla,
 "%80'lik", "resmî", "tahminî", "olağan dışı" vb.
@@ -47,11 +48,12 @@ from havauyari.ui.components import (
     ranking_html,
     skeleton_html,
     station_card_html,
+    station_code,
     tr_datetime,
     tr_num,
     tr_pct,
 )
-from havauyari.ui.theme import card_rules, css, svg, tokens_for
+from havauyari.ui.theme import EMBER_LINE, card_rules, css, svg, tokens_for
 
 REPORTS = ROOT / "reports"
 REPO_URL = "https://github.com/TolgaARSLANN/havauyari"
@@ -61,8 +63,7 @@ PLOT_CONFIG = {"displaylogo": False, "displayModeBar": False, "locale": "tr"}
 ZOOM_CONFIG = {**PLOT_CONFIG, "displayModeBar": "hover",
                "modeBarButtonsToRemove": ["select2d", "lasso2d"]}
 MAP_CONFIG = {**PLOT_CONFIG, "scrollZoom": False}    # sayfa kaydırması haritaya takılmasın
-TABS = [":material/map: Genel bakış", ":material/location_on: İstasyon detayı",
-        ":material/insights: Model performansı", ":material/info: Hakkında"]
+TABS = ["Genel bakış", "İstasyon detayı", "Model performansı", "Hakkında"]
 CARDS_PER_ROW = 4
 
 st.set_page_config(page_title="HavaUyarı · PM2.5 erken uyarı", page_icon=":material/air:",
@@ -71,6 +72,9 @@ st.set_page_config(page_title="HavaUyarı · PM2.5 erken uyarı", page_icon=":ma
 theme_ctx = getattr(st.context, "theme", None)
 T = tokens_for(getattr(theme_ctx, "type", None))
 st.markdown(css(T), unsafe_allow_html=True)
+# Sayfa dili Türkçe: ekran okuyucular doğru telaffuz eder, CSS büyük harfte i -> İ olur
+st.html("<script>(parent.document||document).documentElement.lang='tr';</script>",
+        unsafe_allow_javascript=True)
 
 
 @st.cache_resource(show_spinner=False)
@@ -111,8 +115,11 @@ def station_label(s: dict) -> str:
     return name if name.startswith(city) else f"{city} · {name}"
 
 
-def section(title: str, lead: str | None = None) -> None:
-    st.markdown(f'<h2 class="hu-section-title" lang="tr">{title}</h2>', unsafe_allow_html=True)
+def section(title: str, lead: str | None = None, fig: str | None = None) -> None:
+    """Bölüm: üstte mürekkep çizgisi, solda şekil numarası, serif başlık."""
+    fig_html = f'<span class="hu-fig">{fig}</span>' if fig else ""
+    st.markdown(f'<div class="hu-section" lang="tr">{fig_html}'
+                f'<h2 class="hu-section-title">{title}</h2></div>', unsafe_allow_html=True)
     if lead:
         st.markdown(f'<p class="hu-lead" lang="tr">{lead}</p>', unsafe_allow_html=True)
 
@@ -140,6 +147,34 @@ def scroll_to_top() -> None:
 
 def sync_station_param() -> None:
     st.query_params["istasyon"] = st.session_state["istasyon"]
+
+
+def reading_key() -> str:
+    """Şekil 1'in okuma anahtarı: her işaret bir kez, kendi küçük örneğiyle."""
+    def glyph(inner: str) -> str:
+        return (f'<svg width="34" height="18" viewBox="0 0 34 18" aria-hidden="true" '
+                f'style="flex:none">{inner}</svg>')
+
+    dots = "".join(f'<circle cx="{4 + i * 6.5}" cy="{6 + (i % 2) * 6}" r="2.4"/>'
+                   for i in range(5))
+    items = [
+        (glyph(f'<g fill="{category_color("Orta")}">{dots}</g>'),
+         "<b>Her nokta bir sayım.</b> Yoğunluk, 24 saat sonrası için tahmini gösterir."),
+        (glyph(f'<g fill="{category_color("Orta")}" fill-opacity=".34">{dots}</g>'),
+         "<b>Soluk kuyruk:</b> %80'lik aralığın üst kısmı."),
+        (glyph(f'<line x1="17" x2="17" y1="1" y2="17" stroke="{T.text}" stroke-width="1.6"/>'),
+         "<b>Mürekkep çizgi:</b> tahmin edilen değer."),
+        (glyph(f'<line x1="17" x2="17" y1="0" y2="18" stroke="{EMBER_LINE}" '
+               f'stroke-width="1.6"/>'),
+         "<b>Köz çizgi:</b> resmî uyarı eşiği (35,5 µg/m³). Kuyruğu bu çizgiyi aşan "
+         "istasyon için <b>uyarı riski</b> vardır."),
+    ]
+    rows = "".join(f'<li style="display:flex;gap:14px;align-items:flex-start;padding:12px 0;'
+                   f'border-bottom:1px solid var(--hu-border)">{g}<span class="hu-meta" '
+                   f'style="font-size:0.9rem">{txt}</span></li>' for g, txt in items)
+    return (f'<div lang="tr"><div class="hu-label" style="margin-bottom:6px">Okuma anahtarı'
+            f'</div><ul style="list-style:none;margin:0;padding:0">{rows}</ul>'
+            f'{legend_html()}</div>')
 
 
 # --- Veri ------------------------------------------------------------------------------------
@@ -188,10 +223,14 @@ with tab_overview:
                  "risk": forecasts[s]["alert"]["risk"]} for s in ordered]
         html(hero_html(rows, forecasts[ordered[0]]["target_time"], T))
 
+        section("Parçacık yoğunluğu", "Sekiz istasyon, aynı ölçekte. Noktaların yoğunluğu "
+                                      "24 saat sonrası için tahmini, soluk kuyruk %80'lik "
+                                      "aralığı gösterir.", fig="Şekil 1")
+        html(ranking_html(rows, T))
+
+        section("Harita", fig="Şekil 2")
         left, right = st.columns([7, 5], gap="large")
         with left:
-            section("Harita", "Yarın bu saat için tahmin edilen değer ve kategori. Kırmızı "
-                              "halka uyarıyı, turuncu halka uyarı riskini gösterir.")
             # Harita yakınlığı sunucuda seçilir; genişlik ise tarayıcıda bilinir. İki görünüm
             # üretilir, CSS ekran genişliğine göre birini gösterir (ui/theme.py).
             with st.container(key="map-wide"):
@@ -199,15 +238,12 @@ with tab_overview:
             with st.container(key="map-narrow"):
                 st.plotly_chart(map_figure(rows, T, narrow=True), width="stretch",
                                 config=MAP_CONFIG)
-            html(legend_html())
         with right:
-            section("İstasyonlar tek ölçekte", "Nokta tahmini, renkli bant %80'lik aralığı, "
-                                               "kesikli çizgi resmî eşiği (35,5) gösterir. "
-                                               "Ölçek: µg/m³.")
-            html(f'<div class="hu-card">{ranking_html(rows, T)}</div>')
+            html(reading_key())
 
-        section("İstasyonlar", "24 saat sonrası için tahmine göre sıralı. Çizgi: son 48 saatin "
-                               "ölçümü (gri) ve önümüzdeki 24 saatin tahmini (mavi).")
+        section("İstasyonlar", "Her kartta son 48 saatin ölçümü (mürekkep) ve önümüzdeki "
+                               "24 saatin tahmini (çivit). Ayrıntılar için karta dokunun.",
+                fig="Şekil 3")
         html(card_rules({f"card-{s}": category_color(forecasts[s]["category"])
                          for s in ordered}))
         for i in range(0, len(ordered), CARDS_PER_ROW):
@@ -222,6 +258,7 @@ with tab_overview:
                               icon=":material/arrow_forward:", icon_position="right",
                               type="tertiary", width="stretch")
 
+        st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
         with st.expander("Tablo görünümü", icon=":material/table:"):
             st.dataframe(pd.DataFrame([{
                 "İstasyon": station_label(stations[s]),
@@ -255,6 +292,8 @@ with tab_station:
         slug = slug or ordered[0]
         f = forecasts[slug]
         a = f["alert"]
+        name = station_label(stations[slug])
+        st.markdown('<div style="height:18px"></div>', unsafe_allow_html=True)
         left, right = st.columns([5, 7], gap="large")
         with left:
             if a["is_alert"]:
@@ -269,7 +308,7 @@ with tab_station:
                 status = callout_html("ok", "<b>Uyarı yok.</b> Tahmin ve %80'lik aralık, "
                                             "uyarı düzeyinin altında.", T)
             lm = f["latest_measurement"]
-            measured = (f"Son ölçüm: <b>{tr_num(lm['pm25'])} µg/m³</b> "
+            measured = (f"Son ölçüm <b>{tr_num(lm['pm25'])} µg/m³</b> "
                         f"({tr_datetime(lm['time'], year=False)})"
                         if lm["time"] is not None else "Güncel ölçüm yok")
             low, high = f["interval_80"]["low"], f["interval_80"]["high"]
@@ -277,40 +316,40 @@ with tab_station:
             bar = range_html(f["pm25"], low, high, a["decision_threshold"], T)
             advice = callout_html("health", "<b>Ne yapmalı?</b> " + ADVICE[f["category"]], T)
             html(
-                '<div class="hu-card hu-forecast" lang="tr">'
-                f'<div class="hu-eyebrow">{svg("clock", 14)}{tr_datetime(f["target_time"])} '
-                'için tahmin</div>'
-                '<div class="hu-forecast-top" style="margin-top:14px">'
-                '<div style="display:flex;align-items:baseline;gap:6px">'
-                f'<span class="hu-hero-value">{tr_num(f["pm25"], 0)}</span>'
-                '<span class="hu-unit" style="font-size:1rem">µg/m³</span></div>'
-                f'{chip}</div>{bar}'
+                '<div class="hu-forecast" lang="tr">'
+                f'<div class="hu-eyebrow">{svg("pin", 13)}<b>{station_code(name)}</b> · '
+                f'{tr_datetime(f["target_time"])} için tahmin</div>'
+                f'<div class="hu-hero-value"><span class="hu-num">{tr_num(f["pm25"], 0)}</span>'
+                '<small>µg/m³</small></div>'
+                f'<div class="hu-forecast-meta">{chip}</div>{bar}'
                 f'<div class="hu-meta">%80 olasılıkla <b>{tr_num(low, 0)}–{tr_num(high, 0)} '
                 f'µg/m³</b> · {measured}</div>{status}{advice}</div>')
         with right:
-            html('<div class="hu-card" lang="tr" style="margin-bottom:12px">'
-                 f'<div class="hu-kpi-label">{svg("activity", 14)}Önümüzdeki 24 saat, '
-                 f'saat saat</div>{hourly_strip_html(f, T)}</div>')
+            html(f'<div class="hu-panel" lang="tr"><div class="hu-label" '
+                 f'style="margin-bottom:10px">Önümüzdeki 24 saat · saat saat</div>'
+                 f'{hourly_strip_html(f, T)}</div>')
+            html('<div class="hu-label" lang="tr" style="margin:22px 0 4px">Son 72 saat ve '
+                 'önümüzdeki 24 saat</div>')
             st.plotly_chart(forecast_figure(f, T), width="stretch", config=ZOOM_CONFIG)
             traj = pd.DataFrame(f["trajectory"]).dropna(subset=["actual"])
             if len(traj) >= 12:
                 mae = (traj["pm25"] - traj["actual"]).abs().mean()
-                html('<p class="hu-meta" lang="tr">Koyu çizgi ölçümü, noktalı çizgi aynı saatler '
-                     'için 24 saat önceden verilmiş tahminleri, kalın mavi çizgi önümüzdeki 24 '
-                     f'saatin tahminini gösterir. <b>Canlı kontrol:</b> Son {len(traj)} saatteki '
-                     f'ortalama hata {tr_num(mae)} µg/m³ (geri testteki 12 aylık ortalama: '
-                     '6,8).</p>')
+                html('<p class="hu-meta" lang="tr">Mürekkep çizgi ölçümü, noktalı çizgi aynı '
+                     'saatler için 24 saat önceden verilmiş tahminleri, kalın çivit çizgi '
+                     'önümüzdeki 24 saatin tahminini gösterir. <b>Canlı kontrol:</b> Son '
+                     f'{len(traj)} saatteki ortalama hata {tr_num(mae)} µg/m³ (geri testteki '
+                     '12 aylık ortalama: 6,8).</p>')
 
-        section("Bu tahmin neden böyle?")
+        section("Bu tahmin neden böyle?", fig="Açıklama")
         e_left, e_right = st.columns([5, 7], gap="large")
         with e_left:
             base_txt = tr_num(f["explanation"]["base_value"])
             other_txt = tr_num(f["explanation"]["other_features"], sign=True)
             html(callout_html("info", explanation_sentence(f["explanation"], markup="html"), T)
-                 + f'<p class="hu-meta" lang="tr" style="margin-top:12px">Model, ortalama bir '
+                 + f'<p class="hu-meta" lang="tr" style="margin-top:14px">Model, ortalama bir '
                  f'gün için {base_txt} µg/m³ tahmin eder. Çubuklar, en etkili beş etkenin bu '
-                 'istasyon ve saat için tahmini ne kadar yukarı (↑, turuncu) ya da aşağı (↓, '
-                 f'mavi) çektiğini gösterir. Diğer özelliklerin toplam katkısı: {other_txt} '
+                 'istasyon ve saat için tahmini ne kadar yukarı (↑, pas) ya da aşağı (↓, '
+                 f'çivit) çektiğini gösterir. Diğer özelliklerin toplam katkısı: {other_txt} '
                  'µg/m³.</p>')
         with e_right:
             st.plotly_chart(explanation_figure(f["explanation"], T), width="stretch",
@@ -323,62 +362,56 @@ with tab_model:
     gain = 1 - mae / cams if cams else 0
     left, right = st.columns([5, 7], gap="large")
     with left:
-        html('<div class="hu-card hu-forecast hu-eq" lang="tr">'
-             f'<div class="hu-eyebrow">{svg("trending_down", 14)}12 aylık geri test · '
+        html('<div class="hu-forecast" lang="tr">'
+             f'<div class="hu-eyebrow">{svg("trending_down", 13)}12 aylık geri test · '
              '8 istasyon</div>'
-             f'<div style="margin-top:18px"><span class="hu-big">{tr_pct(gain)}</span></div>'
-             '<div style="font-size:1.15rem;font-weight:600;margin-top:6px">daha az hata</div>'
-             '<p class="hu-lead" style="margin-top:10px">Avrupa\'nın CAMS modeline göre ortalama '
-             f'mutlak hata <b>{tr_num(cams, 2)}</b> µg/m³\'ten <b>{tr_num(mae, 2)}</b> µg/m³\'e '
-             'iniyor. Eşikler ve aralıklar, test dönemi görülmeden yalnızca geçmiş veriden '
-             'seçildi.</p></div>')
+             f'<div class="hu-big" style="margin-top:22px">{tr_pct(gain)}</div>'
+             '<div class="hu-big-sub">daha az hata</div>'
+             '<p class="hu-lead" style="margin-top:16px">Avrupa\'nın CAMS modeline göre '
+             f'ortalama mutlak hata <b>{tr_num(cams, 2)}</b> µg/m³\'ten <b>{tr_num(mae, 2)}'
+             '</b> µg/m³\'e iniyor. Eşikler ve aralıklar, test dönemi görülmeden yalnızca '
+             'geçmiş veriden seçildi.</p></div>')
     with right:
-        html('<div class="hu-card hu-eq" lang="tr">'
-             f'<div class="hu-kpi-label" style="margin-bottom:14px">{svg("activity", 14)}'
-             'Ortalama hata, µg/m³ (kısa çubuk daha iyi)</div>'
+        html('<div lang="tr"><div class="hu-label" style="margin-bottom:6px">Ortalama hata · '
+             '<span class="hu-u">µg/m³</span> · kısa sıra daha iyi</div>'
              f'{mae_bars_html(T)}</div>')
 
-    cols = st.columns(4)
-    cols[0].markdown(kpi_html("Ortalama hata", tr_num(mae, 2),
-                              f"µg/m³ (ham CAMS: {tr_num(cams, 2)})", "activity"),
-                     unsafe_allow_html=True)
-    cols[1].markdown(kpi_html("Yakalanan uyarı",
-                              tr_pct(bt.get("alert_recall_station_thresholds", 0)),
-                              "Gerçek uyarıların oranı (hedef: %80)", "target"),
-                     unsafe_allow_html=True)
-    cols[2].markdown(kpi_html("Doğru uyarı oranı",
-                              tr_pct(bt.get("alert_precision_station_thresholds", 0)),
-                              "Verilen uyarılardan doğru çıkanlar", "shield"),
-                     unsafe_allow_html=True)
-    cols[3].markdown(kpi_html("Aralık kapsaması",
-                              tr_pct(bt.get("interval_80_coverage", 0), 1),
-                              "Ölçümlerin %80'lik aralıkta kalma oranı", "eye"),
-                     unsafe_allow_html=True)
+    html('<div class="hu-kpis">'
+         + kpi_html("Ortalama hata", tr_num(mae, 2),
+                    f"µg/m³ (ham CAMS: {tr_num(cams, 2)})", "activity")
+         + kpi_html("Yakalanan uyarı", tr_pct(bt.get("alert_recall_station_thresholds", 0)),
+                    "Gerçek uyarıların oranı (hedef: %80)", "target")
+         + kpi_html("Doğru uyarı oranı",
+                    tr_pct(bt.get("alert_precision_station_thresholds", 0)),
+                    "Verilen uyarılardan doğru çıkanlar", "shield")
+         + kpi_html("Aralık kapsaması", tr_pct(bt.get("interval_80_coverage", 0), 1),
+                    "Ölçümlerin %80'lik aralıkta kalma oranı", "eye")
+         + "</div>")
 
     curves = load_json("perf_curves.json")
     if curves:
         c1, c2 = st.columns(2, gap="large")
         with c1:
-            section("Uyarılarda yakalama ve isabet dengesi",
+            section("Yakalama ve isabet",
                     "Eğrideki her nokta farklı bir karar eşiğine karşılık gelir. Model, CAMS'ın "
                     "ve basit yöntemlerin sağ üstünde kalıyor; yani aynı isabet düzeyinde daha "
-                    "çok uyarı yakalıyor.")
+                    "çok uyarı yakalıyor.", fig="Şekil 4")
             op = ({"recall": bt["alert_recall_station_thresholds"],
                    "precision": bt["alert_precision_station_thresholds"]}
                   if "alert_recall_station_thresholds" in bt else None)
             st.plotly_chart(pr_figure(curves, op, T), width="stretch", config=PLOT_CONFIG)
         with c2:
-            section("Gerçek değere göre ortalama tahmin",
+            section("Kalibrasyon",
                     "Çizgi köşegene ne kadar yakınsa tahmin o kadar isabetlidir. Yüksek "
                     "değerler hâlâ düşük tahmin ediliyor (bilinen bir sınırlama); CAMS ise bu "
-                    "değerleri çok daha fazla bastırıyor.")
+                    "değerleri çok daha fazla bastırıyor.", fig="Şekil 5")
             st.plotly_chart(calibration_figure(curves, T), width="stretch", config=PLOT_CONFIG)
     families = load_json("feature_families.json")
     if families:
         section("Tahmin neye dayanıyor?",
                 "Özellik ailelerinin tahmine ortalama katkı payı (TreeSHAP). O gün yayımlanan "
                 "hava tahmini, tahminin yaklaşık üçte birini oluşturuyor; CAMS'ın PM2.5 "
-                "değerinin payı ise %1'in altında.")
+                "değerinin payı ise %1'in altında.", fig="Şekil 6")
         st.plotly_chart(families_figure(families["family_share_pct"], T), width="stretch",
                         config=PLOT_CONFIG)
     html(f'<p class="hu-meta">Tüm raporlar: <a href="{REPO_URL}/tree/main/reports" '
@@ -387,7 +420,7 @@ with tab_model:
 # --- Hakkında --------------------------------------------------------------------------------
 with tab_about:
     section("Nasıl çalışır?", "Her saat yeni ölçümler ve hava tahmini alınır, her istasyon için "
-                              "24 saat sonrasının PM2.5 değeri hesaplanır.")
+                              "24 saat sonrasının PM2.5 değeri hesaplanır.", fig="Akış")
     html(pipeline_html())
     c1, c2 = st.columns(2, gap="large")
     with c1:
@@ -413,10 +446,13 @@ with tab_about:
         html('<p class="hu-prose" lang="tr">Ani ve çok yüksek kirlilik olayları hâlâ olduğundan '
              "düşük tahmin ediliyor. Kapsam: 5 şehirde 8 istasyon ve tek tahmin ufku (24 saat). "
              "İki Ankara istasyonunun ölçümlerine duyulan güven düşüktür.</p>")
-    html(f'<p class="hu-prose" lang="tr" style="margin-top:16px">Kaynak kod ve ayrıntılı '
+    html(f'<p class="hu-prose" lang="tr" style="margin-top:18px">Kaynak kod ve ayrıntılı '
          f'raporlar: <a href="{REPO_URL}" target="_blank" rel="noopener">{REPO_URL} '
          f'{svg("external", 13)}</a></p>')
 
-html(f'<footer class="hu-footer" lang="tr">{DISCLAIMER}<br>Veri: Çevre, Şehircilik ve İklim '
-     "Değişikliği Bakanlığı SİM · Open-Meteo (CAMS, hava tahmini). Harita: © CARTO, "
-     "© OpenStreetMap'e katkıda bulunanlar.</footer>")
+html(f'<footer class="hu-footer" lang="tr"><div>{DISCLAIMER}<br>Veri: Çevre, Şehircilik ve '
+     "İklim Değişikliği Bakanlığı SİM · Open-Meteo (CAMS, hava tahmini). Harita: © CARTO, "
+     "© OpenStreetMap'e katkıda bulunanlar.</div>"
+     '<div class="hu-mono">HavaUyarı · Parçacık Defteri<br>PM2.5 · <span class="hu-u">µg/m³'
+     '</span> · t + 24</div>'
+     "</footer>")

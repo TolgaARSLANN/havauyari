@@ -1,0 +1,13 @@
+# Parçacık Defteri
+
+*Görünmeyeni saymak: bir gözlem estetiği*
+
+**Mekân ve biçim.** Her yüzey bir gözlem defterinin sayfasıdır: sıcak, mat bir kâğıt zemin; üzerinde kıl inceliğinde cetvel çizgileri, kenar boşluğunda sayfa işaretleri ve ölçek çentikleri. Biçim, tek bir temel birimden doğar: nokta. Nokta tek başına sessizdir; birikince yoğunluğa, yoğunluk ise anlama dönüşür. Kompozisyon bu birikimin sabırla kaydedilmesidir. Alanlar kutularla değil, boşlukla ve ince yatay çizgilerle ayrılır; hiçbir çerçeve, içindekinden daha yüksek sesle konuşmaz. Bütün yerleşim, ustalıkla kurulmuş bir ızgaraya bağlıdır: her öğe, uzun saatler süren ayarların sonunda bulunduğu yerde durur.
+
+**Renk ve malzeme.** Palet bir doğa bilimcinin çekmecesinden gelir: kâğıt beyazı, is karası mürekkep, grafit gri ve pigment olarak kullanılan birkaç sessiz renk (adaçayı yeşili, hardal sarısı, pas turuncusu, mürdüm moru). Bu renkler süs değil, sınıflandırmadır; her biri yalnızca bir anlam taşır. Tek bir renk ayrıcalıklıdır: köz kırmızısı. O, sınırı işaret eder ve sayfada nadiren, ama her görüldüğünde kesin bir sesle belirir. Gece sürümünde zemin mürekkebe, mürekkep kâğıda döner; oranlar ve sessizlik aynen korunur. Her ton, titiz bir kalibrasyonun ürünü olmalı: yan yana gelen iki renk arasında tek bir kaza bile görünmemeli.
+
+**Ölçek ve ritim.** Hiyerarşi, sert bir ölçek karşıtlığıyla kurulur: dev, ince, zarif bir serif rakam ve onun yanında fısıltı büyüklüğünde, eşit aralıklı mono etiketler. Arada orta büyüklükte bir ses yoktur. Ritim tekrardan doğar: aynı nokta, aynı çizgi kalınlığı, aynı aralık, yüzlerce kez. Tekrar hiçbir zaman mekanik görünmez; her biri elle yerleştirilmiş gibi, sabırlı ve kusursuz bir özenle dizilir. Göz önce büyük biçimi görür, sonra yaklaştıkça sayısız küçük işaretin düzenini keşfeder.
+
+**Kompozisyon ve denge.** Sayfa asimetrik ama huzurludur: ağırlık bir tarafta toplanır, karşı tarafta cömert bir boşluk nefes alır. Yatay bantlar, örnek kayıtları gibi alt alta dizilir; her bant kendi yoğunluğunu gösterir ve hepsi aynı ölçeğe bağlıdır. Böylece karşılaştırma kendiliğinden olur, açıklama gerektirmez. Tek bir dikey çizgi bütün bantları keser: sınır. Her şey ona göre okunur.
+
+**Metin.** Kelimeler görsel mimarinin parçasıdır, onun üzerine yapıştırılmış açıklamalar değil. Başlık bir iki kelimedir; gerisi mono etiketler, şekil numaraları ve ölçek birimleridir. Paragraf yoktur. Söylenmesi gereken her şey önce biçimle, sonra renkle söylenir; kelime yalnızca biçimin zaten gösterdiğini adlandırmak için gelir. Sonuç, en üst düzeyde bir ustanın elinden çıkmış, her ayrıntısı defalarca elden geçirilmiş bir bilimsel levha gibi durmalıdır: sakin, kesin ve uzun uzun bakmayı ödüllendiren.

@@ -1,12 +1,16 @@
-"""Tasarım sistemi (ui-ux-pro-max önerisinden uyarlandı): "gerçek zamanlı operasyon" panosu.
+"""Tasarım sistemi: "Parçacık Defteri" (docs/tasarim/parcacik-defteri.md, levha: .png).
 
-- Nötr renkler: slate skalası; açık ve koyu tema birlikte tanımlı, metin kontrastı ≥ 4.5:1.
-- Durum renkleri: AQI kategori renkleri; her zaman metin ve/veya ikonla birlikte kullanılır.
-- Veri rengi: mavi (#2563EB); katkı grafiğinde renk körlüğüne uygun turuncu/mavi.
-- Tipografi: Fira Sans (metin), Fira Code (büyük sayılar); sayılarda sabit genişlikli rakamlar.
-- İkonlar: Lucide SVG (MIT), emoji yok.
-- Hareket: tek bir yumuşak "belirme" (opacity + transform, 30–60 ms kademeli), 150–280 ms
-  hover geçişleri; prefers-reduced-motion'da tamamen kapalı.
+Bir gözlem defterinin sayfası: sıcak kâğıt zemin, is karası mürekkep, kıl inceliğinde
+cetvel çizgileri. Temel birim noktadır; PM2.5 değeri, noktaların yoğunluğuyla gösterilir.
+
+- Renk: kâğıt / mürekkep / grafit nötrleri; AQI kategorileri doğal pigmentler (adaçayı,
+  hardal, pas, tuğla, mürdüm, bordo). Köz kırmızısı yalnızca sınır (resmî eşik) ve uyarı
+  içindir. Gece temasında zemin mürekkebe, mürekkep kâğıda döner. Metin kontrastı ≥ 4.5:1.
+- Tipografi: Instrument Serif (dev rakamlar ve başlıklar), Instrument Sans (metin),
+  IBM Plex Mono (etiketler, ölçekler, harf aralıklı büyük harf). Orta büyüklükte ses yok.
+- Yapı: kutu ve gölge yerine boşluk ve ince çizgiler. İkonlar: Lucide SVG (MIT), emoji yok.
+- Hareket: tek bir yumuşak belirme (opacity + transform, kademeli); prefers-reduced-motion'da
+  kapalı.
 """
 
 from __future__ import annotations
@@ -24,27 +28,29 @@ class Tokens:
     muted: str
     border: str
     grid: str
-    data: str            # tahmin / vurgu mavisi
-    data_soft: str       # bant dolgusu
+    data: str            # tahmin mürekkebi (çivit)
+    data_soft: str       # aralık bandı
     measured: str        # ölçüm çizgisi
     increase: str        # katkı: artırır
     decrease: str        # katkı: azaltır
     warn: str
-    danger: str
+    danger: str          # köz: resmî eşik ve uyarı
     ok: str
 
 
 LIGHT = Tokens(
-    name="light", bg="#F6F8FB", surface="#FFFFFF", surface_alt="#EEF2F7", text="#0F172A",
-    muted="#475569", border="#E2E8F0", grid="#E9EEF5", data="#2563EB",
-    data_soft="rgba(37,99,235,0.14)", measured="#0F172A", increase="#C2410C",
-    decrease="#1D4ED8", warn="#B45309", danger="#B91C1C", ok="#15803D")
+    name="light", bg="#F3EFE7", surface="#FAF8F3", surface_alt="#EAE4D8", text="#1C1B19",
+    muted="#5F5A52", border="#D6CFC2", grid="#E4DED2", data="#2B4C7E",
+    data_soft="rgba(43,76,126,0.13)", measured="#1C1B19", increase="#B23A0E",
+    decrease="#2B4C7E", warn="#8A5A00", danger="#B23A0E", ok="#35704A")
 
 DARK = Tokens(
-    name="dark", bg="#0B1220", surface="#141C2E", surface_alt="#1F2940", text="#F8FAFC",
-    muted="#A6B3C6", border="#2A3550", grid="#222C42", data="#60A5FA",
-    data_soft="rgba(96,165,250,0.18)", measured="#F8FAFC", increase="#FB923C",
-    decrease="#60A5FA", warn="#FBBF24", danger="#F87171", ok="#4ADE80")
+    name="dark", bg="#12110F", surface="#191815", surface_alt="#24221E", text="#EDE7DC",
+    muted="#A8A194", border="#35322B", grid="#25231F", data="#93B4E6",
+    data_soft="rgba(147,180,230,0.16)", measured="#EDE7DC", increase="#F08A5D",
+    decrease="#93B4E6", warn="#E2B64E", danger="#F2825A", ok="#8CC79B")
+
+EMBER_LINE = "#C4401A"      # resmî eşik çizgisi (her iki temada seçilir)
 
 
 def tokens_for(theme_type: str | None) -> Tokens:
@@ -96,10 +102,10 @@ _ICON_PATHS = {
 }
 
 
-def svg(name: str, size: int = 18, color: str = "currentColor") -> str:
+def svg(name: str, size: int = 18, color: str = "currentColor", stroke: float = 1.75) -> str:
     """Dekoratif ikon: yanında her zaman görünür metin olduğu için aria-hidden."""
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" '
-            f'viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" '
+            f'viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke}" '
             f'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" '
             f'focusable="false" style="flex:none">{_ICON_PATHS[name]}</svg>')
 
@@ -107,27 +113,26 @@ def svg(name: str, size: int = 18, color: str = "currentColor") -> str:
 # ---------------------------------------------------------------------------------------------
 # CSS
 # ---------------------------------------------------------------------------------------------
-FONT_IMPORT = ("@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;600"
-               "&family=Fira+Sans:wght@400;500;600;700&display=swap');")
+FONT_IMPORT = ("@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500"
+               "&family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1"
+               "&display=swap');")
 
 EASE = "cubic-bezier(.2,.8,.2,1)"
+SERIF = "'Instrument Serif', 'Iowan Old Style', Georgia, serif"
+SANS = "'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif"
+MONO = "'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace"
 
 
 def css(t: Tokens) -> str:
-    shadow = ("0 1px 2px rgba(15,23,42,.04), 0 4px 16px -6px rgba(15,23,42,.08)"
-              if t.name == "light" else "0 1px 2px rgba(0,0,0,.3), 0 8px 24px -10px rgba(0,0,0,.5)")
-    shadow_hi = ("0 2px 4px rgba(15,23,42,.05), 0 14px 32px -12px rgba(15,23,42,.18)"
-                 if t.name == "light"
-                 else "0 2px 4px rgba(0,0,0,.35), 0 16px 36px -12px rgba(0,0,0,.6)")
+    grain = ("rgba(28,27,25,.035)" if t.name == "light" else "rgba(237,231,220,.025)")
     return f"""<style>
 {FONT_IMPORT}
 :root {{
   --hu-bg:{t.bg}; --hu-surface:{t.surface}; --hu-surface-alt:{t.surface_alt};
   --hu-text:{t.text}; --hu-muted:{t.muted}; --hu-border:{t.border}; --hu-data:{t.data};
-  --hu-warn:{t.warn}; --hu-danger:{t.danger}; --hu-ok:{t.ok};
-  --hu-radius:16px; --hu-radius-sm:10px; --hu-shadow:{shadow}; --hu-shadow-hi:{shadow_hi};
-  --hu-space-1:4px; --hu-space-2:8px; --hu-space-3:12px; --hu-space-4:16px;
-  --hu-space-6:24px; --hu-space-8:32px; --hu-ease:{EASE};
+  --hu-warn:{t.warn}; --hu-danger:{t.danger}; --hu-ok:{t.ok}; --hu-ember:{EMBER_LINE};
+  --hu-serif:{SERIF}; --hu-sans:{SANS}; --hu-mono:{MONO}; --hu-ease:{EASE};
+  --hu-radius:4px; --hu-space-2:8px; --hu-space-4:16px; --hu-space-6:24px; --hu-space-8:32px;
 }}
 /* Yazı tipi: ikon öğeleri HARİÇ. Streamlit ikonları "Material Symbols" yazı tipinin
    bitişik harfleriyle çizer ("keyboard_arrow_right" -> ok); bu yazı tipi ezilirse ikon adı
@@ -135,327 +140,312 @@ def css(t: Tokens) -> str:
 html, body, .stApp,
 .stApp :is(p, li, label, a, h1, h2, h3, h4, h5, h6, button, input, select, textarea, td, th, div,
            span:not([data-testid="stIconMaterial"]):not([data-testid="stExpanderIcon"])) {{
-  font-family: 'Fira Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: {SANS};
 }}
 [data-testid="stIconMaterial"], [data-testid="stExpanderIcon"], .material-symbols-rounded {{
   font-family: 'Material Symbols Rounded' !important; font-weight: normal; font-style: normal;
   letter-spacing: normal; text-transform: none; white-space: nowrap;
 }}
-/* Genel kuraldaki span:not(...) önceliği (0,2,1) olduğu için sayı yazı tipi !important ister */
-.stApp :is(code, pre, .hu-kpi-value, .hu-station-value, .hu-hero-value, .hu-stat-value,
-           .hu-rank-value, .hu-bar-value, .hu-step-num) {{
-  font-family: 'Fira Code', ui-monospace, monospace !important;
-}}
-.stApp :is(.hu-unit, .hu-stat-value small) {{ font-family: 'Fira Sans', system-ui, sans-serif !important; }}
+/* Genel kuraldaki span:not(...) önceliği yüksek olduğu için yazı tipi sınıfları !important ister */
+.stApp :is(.hu-serif, .hu-title, .hu-hero-title, .hu-big, .hu-num, .hu-kpi-value, .hu-hero-value,
+           .hu-station-value, .hu-step-num, .hu-section-title),
+.stApp :is(.hu-title, .hu-hero-title, .hu-section-title) :not(svg):not(svg *) {{
+  font-family: {SERIF} !important; }}
+.stApp :is(.hu-mono, .hu-eyebrow, .hu-kpi-label, .hu-label, .hu-meta-mono, .hu-station-code,
+           .hu-rank-value-cat, .hu-status, .hu-legend, .hu-axis, .hu-bar-value, code, pre) {{
+  font-family: {MONO} !important; }}
 .stApp {{
-  background:
-    radial-gradient(1100px 420px at 8% -8%, color-mix(in srgb, var(--hu-data) 9%, transparent), transparent 70%),
-    radial-gradient(900px 380px at 100% 0%, color-mix(in srgb, #22C55E 6%, transparent), transparent 70%),
-    var(--hu-bg);
+  background-color: var(--hu-bg);
+  background-image: radial-gradient({grain} 1px, transparent 1px);
+  background-size: 22px 22px;
 }}
-.block-container {{ max-width: 1280px; padding-top: 1.25rem; padding-bottom: 3rem; }}
+.block-container {{ max-width: 1240px; padding-top: 2.2rem; padding-bottom: 4rem; }}
 #MainMenu, footer, [data-testid="stToolbarActions"] {{ visibility: hidden; }}
 [data-testid="stHeader"] {{ background: transparent; }}
-h1, h2, h3, h4 {{ font-weight: 650; letter-spacing: -0.01em; color: var(--hu-text); }}
-.stMarkdown a {{ color: var(--hu-data); text-underline-offset: 3px; }}
+.stMarkdown a {{ color: var(--hu-text); text-decoration-color: var(--hu-ember); text-underline-offset: 3px; }}
+.stMarkdown p {{ color: var(--hu-text); }}
 
-@keyframes hu-rise {{ from {{ opacity:0; transform:translateY(8px); }} to {{ opacity:1; transform:none; }} }}
-@keyframes hu-grow {{ from {{ transform:scaleX(0); }} to {{ transform:scaleX(1); }} }}
-@keyframes hu-pulse {{ 0% {{ box-shadow:0 0 0 0 currentColor; }} 70%, 100% {{ box-shadow:0 0 0 6px transparent; }} }}
+@keyframes hu-rise {{ from {{ opacity:0; transform:translateY(6px); }} to {{ opacity:1; transform:none; }} }}
+@keyframes hu-fade {{ from {{ opacity:0; }} to {{ opacity:1; }} }}
+@keyframes hu-pulse {{ 0% {{ box-shadow:0 0 0 0 currentColor; }} 70%, 100% {{ box-shadow:0 0 0 5px transparent; }} }}
 
-/* --- Başlık -------------------------------------------------------------------------- */
-.hu-header {{ display:flex; justify-content:space-between; align-items:center; gap:16px;
-  flex-wrap:wrap; margin-bottom:var(--hu-space-6); }}
-.hu-brand {{ display:flex; align-items:center; gap:14px; }}
-.hu-logo {{ width:46px; height:46px; flex:none; border-radius:14px; display:grid; place-items:center;
-  background:linear-gradient(135deg, #3B82F6 0%, #1D4ED8 60%, #1E3A8A 100%);
-  box-shadow:0 6px 16px -6px rgba(37,99,235,.55), inset 0 1px 0 rgba(255,255,255,.25); }}
-.stMarkdown h1.hu-title {{ font-size:1.6rem !important; font-weight:700 !important; line-height:1.1 !important;
-  margin:0 !important; padding:0 !important; color:var(--hu-text); letter-spacing:-0.02em; }}
-.hu-subtitle {{ font-size:0.92rem; color:var(--hu-muted); margin:3px 0 0; }}
-.hu-status {{ display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--hu-muted);
-  background:var(--hu-surface); border:1px solid var(--hu-border); padding:7px 14px;
-  border-radius:999px; box-shadow:var(--hu-shadow); font-variant-numeric:tabular-nums; }}
-.hu-status-sep {{ width:1px; height:14px; background:var(--hu-border); }}
-.hu-dot {{ width:8px; height:8px; border-radius:50%; flex:none; }}
-.hu-dot-live {{ animation:hu-pulse 2s ease-out infinite; }}
+/* --- Ortak dil: mono etiket, ince çizgi, dev serif rakam ------------------------------ */
+.hu-label, .hu-eyebrow, .hu-kpi-label {{ font-size:0.72rem; font-weight:500; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--hu-muted); display:flex; align-items:center; gap:8px; }}
+.hu-eyebrow b, .hu-label b {{ color:var(--hu-text); font-weight:500; }}
+/* Birim büyük harfe çevrilmez: text-transform µ'yü Yunanca büyük Mu'ya (Μ) çevirir, "MG/M³" olur */
+.hu-u {{ text-transform:none !important; letter-spacing:.04em; }}
+.hu-rule {{ height:1px; background:var(--hu-text); margin:0; border:0; }}
+.hu-rule-soft {{ height:1px; background:var(--hu-border); margin:0; border:0; }}
+.hu-meta {{ font-size:0.84rem; color:var(--hu-muted); line-height:1.6; }}
+.hu-meta b {{ color:var(--hu-text); font-weight:600; }}
+.hu-lead {{ color:var(--hu-muted); font-size:0.95rem; line-height:1.65; max-width:68ch; margin:6px 0 16px; }}
+.hu-lead b {{ color:var(--hu-text); font-weight:600; }}
 
-/* --- Yükleme iskeleti ------------------------------------------------------------------ */
-@keyframes hu-shimmer {{ from {{ background-position:-600px 0; }} to {{ background-position:600px 0; }} }}
-.hu-skeleton {{ display:flex; flex-direction:column; gap:16px; }}
-.hu-skel {{ border-radius:var(--hu-radius); border:1px solid var(--hu-border);
-  background:linear-gradient(90deg, var(--hu-surface) 0%, var(--hu-surface-alt) 40%, var(--hu-surface) 80%);
-  background-size:1200px 100%; animation:hu-shimmer 1.4s linear infinite; }}
-.hu-skel-row {{ display:grid; grid-template-columns:7fr 5fr; gap:24px; }}
-.hu-skel-cards {{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px; }}
-.hu-skel-note {{ font-size:0.88rem; color:var(--hu-muted); }}
-.hu-sr {{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }}
+/* --- Künye (başlık) ------------------------------------------------------------------- */
+.hu-header {{ margin-bottom:var(--hu-space-6); animation:hu-fade 500ms var(--hu-ease) both; }}
+.hu-header-top {{ display:flex; justify-content:space-between; align-items:center; gap:12px;
+  flex-wrap:wrap; padding-bottom:10px; }}
+.hu-header-main {{ display:flex; justify-content:space-between; align-items:flex-end; gap:24px;
+  flex-wrap:wrap; padding:22px 0 18px; border-top:1px solid var(--hu-text); }}
+.stMarkdown h1.hu-title {{ font-size:clamp(2.6rem, 6vw, 4.4rem) !important; font-weight:400 !important;
+  line-height:.95 !important; letter-spacing:-0.015em; margin:0 !important; padding:0 !important;
+  color:var(--hu-text); }}
+.hu-title em {{ font-style:italic; }}
+.hu-subtitle {{ font-size:0.98rem; color:var(--hu-muted); margin:10px 0 0; max-width:52ch; line-height:1.5; }}
+.hu-status {{ display:flex; align-items:center; gap:10px; font-size:0.72rem; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--hu-muted); }}
+.hu-status strong {{ font-weight:500; }}
+.hu-dot {{ width:7px; height:7px; border-radius:50%; flex:none; display:inline-block; }}
+.hu-dot-live {{ animation:hu-pulse 2.2s ease-out infinite; }}
+.hu-colophon {{ text-align:right; }}
+.hu-colophon div {{ font-family:{MONO} !important; font-size:0.72rem; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--hu-muted); line-height:1.9; }}
+.hu-colophon div:first-child {{ color:var(--hu-text); }}
 
-/* --- Özet bant (hero) --------------------------------------------------------------- */
-.hu-hero {{ position:relative; overflow:hidden; display:grid;
-  grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); gap:28px; align-items:end;
-  padding:28px 30px; border-radius:22px; border:1px solid var(--hu-border);
-  background:
-    radial-gradient(700px 260px at 0% 0%, var(--hu-glow), transparent 70%),
-    var(--hu-surface);
-  box-shadow:var(--hu-shadow); margin-bottom:var(--hu-space-6);
-  animation:hu-rise 420ms var(--hu-ease) both; }}
-.hu-eyebrow {{ display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:600;
-  text-transform:uppercase; letter-spacing:.06em; color:var(--hu-muted); }}
-.hu-hero-title {{ display:flex; align-items:center; gap:12px; font-size:1.65rem;
-  line-height:1.2; font-weight:700; letter-spacing:-0.02em; margin:14px 0 8px; color:var(--hu-text); }}
-.hu-hero-icon {{ width:40px; height:40px; flex:none; border-radius:12px; display:grid; place-items:center;
-  color:var(--hu-tone); background:color-mix(in srgb, var(--hu-tone) 12%, transparent);
-  border:1px solid color-mix(in srgb, var(--hu-tone) 30%, transparent); }}
-.hu-hero-lead {{ color:var(--hu-muted); font-size:0.98rem; line-height:1.55; margin:0 0 18px; max-width:62ch; }}
+/* --- Sekmeler: mono, harf aralıklı; seçim bir mürekkep çizgisiyle kayar --------------- */
+[data-testid="stTabs"] [role="tablist"] {{ gap:28px; border-bottom:1px solid var(--hu-border);
+  margin-bottom:var(--hu-space-6); overflow-x:auto; scrollbar-width:none; }}
+[data-testid="stTabs"] [role="tablist"]::-webkit-scrollbar {{ display:none; }}
+[data-testid="stTab"] {{ height:44px; padding:0 2px; background:transparent !important;
+  color:var(--hu-muted); white-space:nowrap; transition:color 200ms ease; }}
+[data-testid="stTab"] p {{ font-family:{MONO} !important; font-size:0.74rem !important; font-weight:500;
+  letter-spacing:.14em; text-transform:uppercase; color:inherit; margin:0; }}
+[data-testid="stTab"]:hover {{ color:var(--hu-text); }}
+[data-testid="stTab"][data-selected="true"] {{ color:var(--hu-text); }}
+.stApp [data-testid="stTabs"] [data-testid="stTab"] .react-aria-SelectionIndicator {{
+  background:var(--hu-text) !important; height:2px !important;
+  transition:translate 320ms var(--hu-ease), width 320ms var(--hu-ease) !important; }}
+@keyframes hu-panel-in {{ from {{ opacity:0; transform:translateY(4px); }} to {{ opacity:1; transform:none; }} }}
+[data-testid="stTabPanel"]:not([inert]) {{ animation:hu-panel-in 260ms var(--hu-ease); }}
+
+/* --- Levha (özet) ----------------------------------------------------------------------- */
+.hu-hero {{ display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:48px;
+  align-items:end; padding:4px 0 28px; border-bottom:1px solid var(--hu-border);
+  margin-bottom:var(--hu-space-6); animation:hu-rise 480ms var(--hu-ease) both; }}
+.hu-hero-title {{ font-size:clamp(2.1rem, 4.2vw, 3.3rem); line-height:1.02; font-weight:400;
+  letter-spacing:-0.01em; color:var(--hu-text); margin:14px 0 14px; }}
+.hu-hero-title em {{ font-style:italic; color:var(--hu-tone); }}
+.hu-hero-lead {{ color:var(--hu-muted); font-size:1rem; line-height:1.65; margin:0 0 22px; max-width:56ch; }}
 .hu-hero-lead b {{ color:var(--hu-text); font-weight:600; }}
-.hu-dist {{ display:flex; gap:3px; height:10px; border-radius:999px; overflow:hidden; }}
-.hu-dist-seg {{ transform-origin:left; animation:hu-grow 700ms var(--hu-ease) both 150ms; }}
-.hu-dist-legend {{ display:flex; flex-wrap:wrap; gap:6px 16px; margin-top:10px; font-size:0.85rem;
+.hu-dist {{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }}
+.hu-dist-dot {{ width:14px; height:14px; border-radius:50%; flex:none;
+  animation:hu-rise 420ms var(--hu-ease) both; animation-delay:calc(var(--i) * 50ms + 150ms); }}
+.hu-dist-legend {{ display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:12px; font-family:{MONO} !important;
+  font-size:0.72rem; letter-spacing:.12em; text-transform:uppercase; color:var(--hu-muted); }}
+.hu-dist-legend > span {{ display:inline-flex; align-items:center; gap:7px; }}
+.hu-dist-legend b {{ color:var(--hu-text); font-weight:500; }}
+.hu-hero-side {{ border-left:1px solid var(--hu-border); padding-left:32px; }}
+.hu-hero-value {{ font-size:clamp(5rem, 11vw, 8.5rem); line-height:.82; color:var(--hu-text);
+  letter-spacing:-0.03em; display:flex; align-items:baseline; gap:10px; margin:10px 0 6px; }}
+.hu-hero-value small {{ font-family:{MONO} !important; font-size:0.8rem; letter-spacing:.08em;
   color:var(--hu-muted); }}
-.hu-dist-legend > span {{ display:inline-flex; align-items:center; gap:6px; }}
-.hu-dist-legend b {{ color:var(--hu-text); font-variant-numeric:tabular-nums; }}
-.hu-hero-stats {{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr));
-  background:color-mix(in srgb, var(--hu-surface) 70%, transparent); backdrop-filter:blur(8px);
-  border:1px solid var(--hu-border); border-radius:16px; }}
-.hu-stat {{ padding:14px 16px; min-width:0; }}
-.hu-stat + .hu-stat {{ border-left:1px solid var(--hu-border); }}
-.hu-stat-label {{ font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em;
-  color:var(--hu-muted); }}
-.hu-stat-value {{ font-size:1.9rem; font-weight:600; line-height:1.15; margin-top:6px;
-  font-variant-numeric:tabular-nums; white-space:nowrap; }}
-.hu-stat-value small {{ font-size:0.9rem; font-weight:500; color:var(--hu-muted); margin-left:2px; }}
-.hu-stat-sub {{ font-size:0.78rem; color:var(--hu-muted); margin-top:4px; line-height:1.35; }}
+.hu-hero-stats {{ display:grid; grid-template-columns:1fr 1fr; margin-top:18px; border-top:1px solid var(--hu-border); }}
+.hu-stat {{ padding:12px 0 0; }}
+.hu-stat + .hu-stat {{ padding-left:18px; border-left:1px solid var(--hu-border); }}
+.hu-stat-value {{ font-family:{SERIF} !important; font-size:2.3rem; line-height:1; margin-top:6px; }}
+.hu-stat-value small {{ font-family:{MONO} !important; font-size:0.78rem; color:var(--hu-muted); margin-left:3px; }}
 
 /* --- Bölüm başlıkları ------------------------------------------------------------------ */
-.stMarkdown h2.hu-section-title {{ font-size:1.12rem !important; font-weight:650 !important;
-  line-height:1.3 !important; padding:0 !important; margin:var(--hu-space-6) 0 2px !important; }}
-.hu-lead {{ color:var(--hu-muted); font-size:0.92rem; line-height:1.6; max-width:75ch; margin:0 0 12px; }}
-.hu-meta {{ font-size:0.82rem; color:var(--hu-muted); font-variant-numeric:tabular-nums; line-height:1.55; }}
+.hu-section {{ display:flex; align-items:baseline; gap:14px; margin:36px 0 4px;
+  padding-top:14px; border-top:1px solid var(--hu-text); }}
+.hu-section .hu-fig {{ font-family:{MONO} !important; font-size:0.72rem; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--hu-muted); white-space:nowrap; }}
+.stMarkdown h2.hu-section-title {{ font-family:{SERIF} !important; font-size:1.9rem !important;
+  font-weight:400 !important; line-height:1.1 !important; padding:0 !important; margin:0 !important;
+  letter-spacing:-0.005em; }}
 
-/* --- Genel kart ve KPI ---------------------------------------------------------------- */
-.hu-card {{ background:var(--hu-surface); border:1px solid var(--hu-border); box-shadow:var(--hu-shadow);
-  border-radius:var(--hu-radius); padding:18px 20px; }}
-.hu-kpi {{ height:100%; margin-bottom:var(--hu-space-2); animation:hu-rise 420ms var(--hu-ease) both; }}
-.hu-kpi-label {{ font-size:0.78rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em;
-  color:var(--hu-muted); display:flex; align-items:center; gap:8px; }}
-.hu-kpi-icon {{ width:28px; height:28px; border-radius:8px; display:grid; place-items:center;
-  color:var(--hu-data); background:color-mix(in srgb, var(--hu-data) 10%, transparent); }}
-.hu-kpi-value {{ font-size:clamp(1.4rem, 2.1vw, 2rem); white-space:nowrap;
-  font-weight:600; color:var(--hu-text); margin-top:10px; line-height:1.1; font-variant-numeric:tabular-nums; }}
-.hu-kpi-sub {{ font-size:0.84rem; color:var(--hu-muted); margin-top:6px; }}
+/* --- Şekil: parçacık bantları ----------------------------------------------------------- */
+.hu-rank ol {{ list-style:none; margin:0; padding:0; }}
+.hu-rank-row {{ display:grid; grid-template-columns:minmax(150px, 22%) 1fr 108px; gap:18px;
+  align-items:center; padding:0; border-bottom:1px solid var(--hu-grid, var(--hu-border));
+  animation:hu-fade 520ms var(--hu-ease) both; animation-delay:calc(var(--i) * 60ms); }}
+.hu-rank-row:last-child {{ border-bottom:0; }}
+.hu-rank-name {{ font-size:0.92rem; color:var(--hu-text); display:flex; flex-direction:column; gap:3px;
+  min-width:0; }}
+.hu-rank-name span {{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
+.hu-rank-name small {{ font-family:{MONO} !important; font-size:0.66rem; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--hu-muted); display:flex; align-items:center; gap:6px; }}
+.hu-rank-flag {{ color:var(--hu-danger); }}
+.hu-particles {{ display:block; width:100%; height:auto; }}
+.hu-rank-value {{ display:flex; align-items:baseline; justify-content:flex-end; gap:10px; }}
+.hu-rank-value .hu-num {{ font-size:2.5rem; line-height:1; color:var(--hu-text); }}
+.hu-rank-value-cat {{ font-size:0.64rem; letter-spacing:.14em; text-transform:uppercase; color:var(--hu-muted);
+  text-align:right; }}
+.hu-axis {{ display:grid; grid-template-columns:minmax(150px, 22%) 1fr 108px; gap:18px;
+  font-size:0.7rem; color:var(--hu-muted); margin-top:8px; }}
+.hu-axis-ticks {{ position:relative; height:38px; border-top:1px solid var(--hu-text); }}
+.hu-axis-ticks > span {{ position:absolute; top:6px; transform:translateX(-50%); }}
+.hu-axis-ticks > em {{ position:absolute; top:22px; transform:translateX(-50%); font-style:normal;
+  color:var(--hu-ember); white-space:nowrap; letter-spacing:.08em; }}
+.hu-axis > span:first-child {{ padding-top:6px; letter-spacing:.1em; }}
 
-/* Yan yana kartlar aynı yükseklikte: sütundan karta kadar tüm kaplar tam boy */
-[data-testid="stColumn"]:has(.hu-eq) :is([data-testid="stVerticalBlock"], [data-testid="stElementContainer"],
-  .stMarkdown, [data-testid="stMarkdownContainer"]) {{ height:100%; }}
-.hu-eq {{ height:100%; box-sizing:border-box; }}
-
-/* --- Sıralama (tek ölçekte tüm istasyonlar) --------------------------------------------- */
-.hu-rank ol {{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }}
-.hu-rank-row, .hu-rank-axis {{ display:grid; grid-template-columns:minmax(120px, 44%) 1fr 30px;
-  gap:12px; align-items:center; }}
-.hu-rank-row {{ min-height:34px; padding:2px 6px; margin:0 -6px; border-radius:8px;
-  animation:hu-rise 380ms var(--hu-ease) both; animation-delay:calc(var(--i) * 45ms);
-  transition:background-color 150ms ease; }}
-.hu-rank-row:hover {{ background:var(--hu-surface-alt); }}
-.hu-rank-name {{ font-size:0.86rem; color:var(--hu-text); white-space:nowrap; overflow:hidden;
-  text-overflow:ellipsis; display:flex; align-items:center; gap:5px; }}
-.hu-rank-flag {{ display:inline-flex; flex:none; }}
-.hu-rank-track {{ position:relative; height:10px; border-radius:999px; }}
-.hu-rank-band {{ position:absolute; top:0; bottom:0; border-radius:999px; }}
-.hu-rank-thr {{ position:absolute; top:-5px; bottom:-5px; border-left:1.5px dashed #F97316; }}
-.hu-rank-dot {{ position:absolute; top:50%; width:14px; height:14px; border-radius:50%;
-  transform:translate(-50%,-50%); border:2px solid var(--hu-surface);
-  box-shadow:0 0 0 1px rgba(15,23,42,.35), 0 2px 6px rgba(15,23,42,.2); }}
-.hu-rank-value {{ font-size:0.95rem; font-weight:600; text-align:right; color:var(--hu-text);
-  font-variant-numeric:tabular-nums; }}
-.hu-rank-axis {{ margin-top:6px; font-size:0.72rem; color:var(--hu-muted); }}
-.hu-rank-ticks {{ position:relative; height:16px; }}
-.hu-rank-ticks > * {{ position:absolute; transform:translateX(-50%); font-variant-numeric:tabular-nums; }}
-.hu-rank-ticks em {{ top:14px; font-style:normal; color:#C2410C; white-space:nowrap; }}
-.hu-rank-axis > span:last-child {{ text-align:right; }}
-
-/* --- İstasyon kartları: Streamlit kabı kartın kendisidir (düğme kartın içinde kalır) ----- */
+/* --- Örnek kartları (istasyonlar) ------------------------------------------------------- */
 [class*="st-key-card-"] {{
   background:var(--hu-surface); border:1px solid var(--hu-border); border-radius:var(--hu-radius);
-  box-shadow:var(--hu-shadow); padding:16px 16px 6px; gap:4px !important; position:relative;
-  overflow:hidden; transition:transform 200ms var(--hu-ease), box-shadow 200ms ease, border-color 200ms ease;
-  animation:hu-rise 420ms var(--hu-ease) both;
+  padding:18px 18px 4px; gap:2px !important; position:relative; overflow:hidden;
+  transition:border-color 220ms ease, transform 220ms var(--hu-ease);
+  animation:hu-rise 460ms var(--hu-ease) both;
 }}
-[class*="st-key-card-"]::before {{ content:""; position:absolute; inset:0 0 auto 0; height:3px;
+[class*="st-key-card-"]::before {{ content:""; position:absolute; left:18px; top:0; width:28px; height:3px;
   background:var(--hu-cat, var(--hu-border)); }}
-[class*="st-key-card-"]:hover {{ transform:translateY(-2px); box-shadow:var(--hu-shadow-hi);
-  border-color:color-mix(in srgb, var(--hu-data) 45%, var(--hu-border)); }}
-[class*="st-key-card-"] [data-testid="stButton"] {{ border-top:1px solid var(--hu-border); margin-top:6px; }}
-[class*="st-key-card-"] [data-testid="stButton"] button {{ width:100%; min-height:42px; border-radius:0;
-  color:var(--hu-data); padding:0 2px; }}
+[class*="st-key-card-"]:hover {{ border-color:var(--hu-text); transform:translateY(-2px); }}
+[class*="st-key-card-"] [data-testid="stButton"] {{ border-top:1px solid var(--hu-border); margin-top:10px; }}
+[class*="st-key-card-"] [data-testid="stButton"] button {{ width:100%; min-height:44px; border-radius:0;
+  color:var(--hu-text); padding:0; background:transparent; }}
 [class*="st-key-card-"] [data-testid="stButton"] button > div,
 [class*="st-key-card-"] [data-testid="stButton"] button > div > span {{ width:100%; display:flex;
   justify-content:space-between; align-items:center; }}
-[class*="st-key-card-"] [data-testid="stButton"] button p {{ font-weight:600; font-size:0.86rem; }}
+[class*="st-key-card-"] [data-testid="stButton"] button p {{ font-family:{MONO} !important; font-size:0.72rem;
+  font-weight:500; letter-spacing:.14em; text-transform:uppercase; }}
 [class*="st-key-card-"] [data-testid="stButton"] [data-testid="stIconMaterial"] {{
-  transition:transform 200ms var(--hu-ease); }}
-[class*="st-key-card-"]:hover [data-testid="stButton"] [data-testid="stIconMaterial"] {{ transform:translateX(3px); }}
-[class*="st-key-card-"] [data-testid="stButton"] button:hover {{ color:var(--hu-text); }}
+  color:var(--hu-ember); transition:transform 220ms var(--hu-ease); }}
+[class*="st-key-card-"]:hover [data-testid="stButton"] [data-testid="stIconMaterial"] {{ transform:translateX(4px); }}
 .hu-station-head {{ display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }}
-.hu-station-head > div:first-child {{ min-width:0; }}
-.hu-station-name {{ font-weight:600; font-size:0.98rem; color:var(--hu-text); line-height:1.3; }}
-.hu-station-city {{ font-size:0.78rem; color:var(--hu-muted); display:flex; gap:4px;
-  align-items:center; margin-top:3px; }}
-.hu-station-mid {{ display:flex; justify-content:space-between; align-items:center; gap:8px;
-  margin-top:12px; flex-wrap:wrap; }}
-.hu-station-value {{ font-size:2.1rem; font-weight:600; line-height:1; color:var(--hu-text);
-  font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }}
-.hu-unit {{ font-size:0.82rem; font-weight:500; color:var(--hu-muted); margin-left:5px; letter-spacing:0; }}
-.hu-spark {{ display:block; width:100%; height:56px; margin:12px 0 8px; overflow:visible; }}
-.hu-station-foot {{ display:flex; justify-content:space-between; gap:8px; font-size:0.8rem;
-  color:var(--hu-muted); font-variant-numeric:tabular-nums; }}
-.hu-station-foot b {{ color:var(--hu-text); font-weight:600; }}
+.hu-station-code {{ font-size:0.68rem; letter-spacing:.16em; text-transform:uppercase; color:var(--hu-muted); }}
+.hu-station-name {{ font-weight:600; font-size:0.98rem; color:var(--hu-text); line-height:1.3; margin-top:6px; }}
+.hu-station-city {{ font-size:0.8rem; color:var(--hu-muted); margin-top:2px; }}
+.hu-station-mid {{ display:flex; justify-content:space-between; align-items:flex-end; gap:8px; margin-top:10px; }}
+.hu-station-value {{ font-size:3.6rem; line-height:.9; color:var(--hu-text); letter-spacing:-0.02em; }}
+.hu-unit {{ font-family:{MONO} !important; font-size:0.72rem; font-weight:400; color:var(--hu-muted);
+  margin-left:6px; letter-spacing:.06em; }}
+.hu-spark {{ display:block; width:100%; height:52px; margin:14px 0 10px; overflow:visible; }}
+.hu-station-foot {{ display:flex; justify-content:space-between; gap:8px; font-family:{MONO} !important;
+  font-size:0.72rem; color:var(--hu-muted); letter-spacing:.04em; }}
+.hu-station-foot b {{ color:var(--hu-text); font-weight:500; }}
 
-/* --- Rozetler: renk + metin (+ ikon) --------------------------------------------------- */
-.hu-chip {{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px;
-  border-radius:999px; font-size:0.8rem; font-weight:600; line-height:1.3; white-space:nowrap; }}
-.hu-chip-swatch {{ width:10px; height:10px; border-radius:50%; flex:none;
-  box-shadow:inset 0 0 0 1px rgba(15,23,42,.2); }}
-.hu-flag {{ display:inline-flex; align-items:center; gap:5px; font-size:0.78rem; font-weight:600;
-  padding:4px 9px; border-radius:999px; white-space:nowrap; flex:none;
-  border:1px solid color-mix(in srgb, currentColor 35%, transparent); }}
-.hu-flag-quiet {{ border-color:transparent; padding-right:0; }}
-.hu-legend {{ display:flex; flex-wrap:wrap; gap:6px 14px; font-size:0.8rem; color:var(--hu-text);
-  margin:10px 2px 0; }}
-.hu-legend > span {{ display:inline-flex; align-items:center; gap:6px; }}
-.hu-legend em {{ font-style:normal; color:var(--hu-muted); font-variant-numeric:tabular-nums; }}
+/* --- Rozetler ----------------------------------------------------------------------- */
+.hu-chip {{ display:inline-flex; align-items:center; gap:7px; font-family:{MONO} !important;
+  font-size:0.68rem; font-weight:500; letter-spacing:.12em; text-transform:uppercase;
+  line-height:1.3; white-space:nowrap; color:var(--hu-text); }}
+.hu-chip-solid {{ padding:5px 10px; border-radius:2px; }}
+.hu-chip-swatch {{ width:9px; height:9px; border-radius:50%; flex:none; }}
+.hu-flag {{ display:inline-flex; align-items:center; gap:6px; font-family:{MONO} !important; font-size:0.66rem;
+  font-weight:500; letter-spacing:.14em; text-transform:uppercase; white-space:nowrap; flex:none; }}
+.hu-legend {{ display:flex; flex-wrap:wrap; gap:6px 18px; font-size:0.68rem; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--hu-text); margin:12px 0 0; }}
+.hu-legend > span {{ display:inline-flex; align-items:center; gap:7px; }}
+.hu-legend em {{ font-style:normal; color:var(--hu-muted); }}
 
-/* --- Tahmin kartı ---------------------------------------------------------------------- */
-.hu-forecast {{ animation:hu-rise 420ms var(--hu-ease) both; }}
-.hu-forecast-top {{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }}
-.hu-hero-value {{ font-size:4rem; font-weight:600; line-height:.95; color:var(--hu-text);
-  font-variant-numeric:tabular-nums; letter-spacing:-0.03em; }}
-.hu-range {{ position:relative; height:12px; border-radius:999px; margin:34px 0 26px; }}
-.hu-range-band {{ position:absolute; top:0; bottom:0; border-radius:999px; background:var(--hu-data);
-  opacity:.45; }}
-.hu-range-point {{ position:absolute; top:50%; width:18px; height:18px; border-radius:50%;
-  background:var(--hu-data); transform:translate(-50%,-50%); border:3px solid var(--hu-surface);
-  box-shadow:0 0 0 1px var(--hu-data), 0 2px 8px rgba(37,99,235,.4); }}
-.hu-range-thr {{ position:absolute; top:-8px; bottom:-8px; width:0; border-left:2px dashed #F97316; }}
-.hu-range-label {{ position:absolute; top:-26px; font-size:0.72rem; color:var(--hu-muted);
-  transform:translateX(-50%); white-space:nowrap; }}
-.hu-range-axis {{ position:absolute; top:18px; font-size:0.72rem; color:var(--hu-muted);
-  transform:translateX(-50%); font-variant-numeric:tabular-nums; }}
-.hu-callout {{ display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:12px;
-  font-size:0.92rem; line-height:1.55; margin-top:12px;
-  background:color-mix(in srgb, var(--hu-c) 7%, var(--hu-surface));
-  border:1px solid color-mix(in srgb, var(--hu-c) 28%, transparent); }}
-.hu-callout-icon {{ margin-top:1px; display:inline-flex; }}
-
-/* --- Saatlik şerit ---------------------------------------------------------------------- */
-.hu-hours {{ margin:4px 0 6px; }}
-.hu-hours-grid {{ display:grid; grid-template-columns:repeat(24, minmax(0,1fr)); gap:3px;
-  align-items:end; height:64px; padding-bottom:18px; position:relative; }}
-.hu-hour {{ position:relative; height:calc(18% + var(--h) * 82%); border-radius:5px 5px 3px 3px;
-  background:color-mix(in srgb, var(--c) 85%, transparent); transform-origin:bottom;
-  animation:hu-rise 360ms var(--hu-ease) both; transition:filter 150ms ease; }}
-.hu-hour:hover {{ filter:brightness(1.08) saturate(1.2); outline:2px solid var(--hu-text); outline-offset:1px; }}
-.hu-hour-lbl {{ position:absolute; bottom:-18px; left:0; font-size:0.7rem; color:var(--hu-muted);
-  font-variant-numeric:tabular-nums; }}
-.hu-hours-note {{ display:flex; align-items:center; gap:6px; font-size:0.85rem; color:var(--hu-muted);
+/* --- İstasyon detayı ----------------------------------------------------------------- */
+.hu-forecast {{ animation:hu-rise 460ms var(--hu-ease) both; }}
+.hu-forecast .hu-hero-value {{ font-size:clamp(5.5rem, 10vw, 8rem); }}
+.hu-forecast-meta {{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:6px 0 18px; }}
+.hu-range {{ position:relative; height:10px; border-radius:1px; margin:34px 0 30px; }}
+.hu-range-band {{ position:absolute; top:-3px; bottom:-3px; opacity:.75;
+  background:repeating-linear-gradient(90deg, var(--hu-data) 0 1.5px, transparent 1.5px 5px);
+  border-left:1.5px solid var(--hu-data); border-right:1.5px solid var(--hu-data); }}
+.hu-range-point {{ position:absolute; top:-7px; bottom:-7px; width:2px; background:var(--hu-text);
+  transform:translateX(-1px); }}
+.hu-range-thr {{ position:absolute; top:-12px; bottom:-12px; width:0; border-left:1.5px solid var(--hu-ember); }}
+.hu-range-label {{ position:absolute; top:-30px; font-family:{MONO} !important; font-size:0.66rem;
+  letter-spacing:.1em; color:var(--hu-ember); transform:translateX(-50%); white-space:nowrap; }}
+.hu-range-axis {{ position:absolute; top:18px; font-family:{MONO} !important; font-size:0.66rem;
+  color:var(--hu-muted); transform:translateX(-50%); }}
+.hu-callout {{ display:flex; gap:12px; align-items:flex-start; padding:12px 0 12px 16px;
+  font-size:0.94rem; line-height:1.6; margin-top:14px; border-left:2px solid var(--hu-c); }}
+.hu-callout-icon {{ margin-top:2px; display:inline-flex; }}
+.hu-hours svg {{ display:block; width:100%; height:auto; }}
+.hu-hours-note {{ display:flex; align-items:center; gap:8px; font-size:0.86rem; color:var(--hu-muted);
   margin-top:10px; }}
-.hu-hours-note b {{ color:var(--hu-text); }}
+.hu-hours-note b {{ color:var(--hu-text); font-weight:600; }}
+.hu-hour {{ animation:hu-fade 420ms var(--hu-ease) both; }}
+.hu-panel {{ padding:0 0 4px; }}
 
-/* --- Model: hata karşılaştırması -------------------------------------------------------- */
-.hu-bars {{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }}
-.hu-bar-row {{ display:grid; grid-template-columns:minmax(140px, 38%) 1fr 48px; gap:12px; align-items:center;
-  font-size:0.88rem; color:var(--hu-muted); }}
-.hu-bar-track {{ height:12px; border-radius:999px; background:var(--hu-surface-alt); overflow:hidden; }}
-.hu-bar-fill {{ display:block; height:100%; border-radius:999px; background:color-mix(in srgb, var(--hu-muted) 55%, transparent);
-  transform-origin:left; animation:hu-grow 700ms var(--hu-ease) both; animation-delay:calc(var(--i) * 60ms); }}
-.hu-bar-value {{ text-align:right; font-variant-numeric:tabular-nums; }}
+/* --- Model -------------------------------------------------------------------------- */
+.hu-big {{ font-size:clamp(5rem, 10vw, 8rem); line-height:.85; color:var(--hu-text); letter-spacing:-0.03em; }}
+.hu-big-sub {{ font-family:{SERIF} !important; font-style:italic; font-size:2rem; line-height:1.1; margin-top:6px; }}
+.hu-bars {{ list-style:none; margin:0; padding:0; }}
+.hu-bar-row {{ display:grid; grid-template-columns:minmax(150px, 40%) 1fr 56px; gap:14px; align-items:center;
+  padding:9px 0; border-bottom:1px solid var(--hu-border); font-size:0.9rem; color:var(--hu-muted); }}
+.hu-bar-track {{ height:10px; position:relative; }}
+.hu-bar-fill {{ display:block; height:100%; background-image:radial-gradient(var(--hu-muted) 1.4px, transparent 1.6px);
+  background-size:6px 6px; background-position:0 50%; transform-origin:left;
+  animation:hu-grow 800ms var(--hu-ease) both; animation-delay:calc(var(--i) * 70ms); }}
+@keyframes hu-grow {{ from {{ clip-path:inset(0 100% 0 0); }} to {{ clip-path:inset(0 0 0 0); }} }}
+.hu-bar-value {{ text-align:right; font-size:0.84rem; }}
 .hu-bar-ours {{ color:var(--hu-text); font-weight:600; }}
-.hu-bar-ours .hu-bar-fill {{ background:linear-gradient(90deg, #3B82F6, var(--hu-data)); }}
-.hu-bar-ours .hu-bar-value {{ color:var(--hu-data); }}
-.hu-big {{ font-family:'Fira Code', ui-monospace, monospace; font-size:3rem; font-weight:600;
-  line-height:1; color:var(--hu-data); letter-spacing:-0.03em; }}
+.hu-bar-ours .hu-bar-fill {{ background-image:radial-gradient(var(--hu-data) 1.8px, transparent 2px); }}
+.hu-kpis {{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); border-top:1px solid var(--hu-text);
+  border-bottom:1px solid var(--hu-border); margin:32px 0 8px; }}
+.hu-kpi {{ padding:16px 18px 18px; animation:hu-rise 460ms var(--hu-ease) both; }}
+.hu-kpi + .hu-kpi {{ border-left:1px solid var(--hu-border); }}
+.hu-kpi:first-child {{ padding-left:0; }}
+.hu-kpi-value {{ font-size:2.9rem; line-height:1; color:var(--hu-text); margin-top:12px; white-space:nowrap; }}
+.hu-kpi-sub {{ font-size:0.84rem; color:var(--hu-muted); margin-top:8px; line-height:1.45; }}
+.hu-kpi-icon {{ display:inline-flex; color:var(--hu-muted); }}
 
-/* --- Hakkında: akış adımları ------------------------------------------------------------ */
-.hu-steps {{ list-style:none; margin:8px 0 0; padding:0; display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:12px; }}
-.hu-step {{ position:relative; display:flex; flex-direction:column; gap:6px; padding:16px;
-  border-radius:var(--hu-radius); background:var(--hu-surface); border:1px solid var(--hu-border);
-  box-shadow:var(--hu-shadow); font-size:0.86rem; color:var(--hu-muted); line-height:1.5;
-  animation:hu-rise 420ms var(--hu-ease) both; animation-delay:calc(var(--i) * 60ms); }}
-.hu-step b {{ color:var(--hu-text); font-size:0.98rem; }}
-.hu-step-icon {{ width:36px; height:36px; border-radius:10px; display:grid; place-items:center;
-  color:var(--hu-data); background:color-mix(in srgb, var(--hu-data) 10%, transparent); }}
-.hu-step-num {{ position:absolute; top:16px; right:16px; font-size:0.78rem; color:var(--hu-muted); }}
-.hu-prose {{ color:var(--hu-muted); font-size:0.95rem; line-height:1.65; }}
-.hu-prose b {{ color:var(--hu-text); }}
-.hu-footer {{ margin-top:var(--hu-space-8); padding-top:var(--hu-space-4);
-  border-top:1px solid var(--hu-border); font-size:0.8rem; color:var(--hu-muted); line-height:1.6; }}
+/* --- Hakkında: akış ------------------------------------------------------------------ */
+.hu-steps {{ list-style:none; margin:10px 0 0; padding:0; display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); border-top:1px solid var(--hu-text); }}
+.hu-step {{ position:relative; display:flex; flex-direction:column; gap:8px; padding:18px 18px 22px 0;
+  font-size:0.88rem; color:var(--hu-muted); line-height:1.55;
+  animation:hu-rise 460ms var(--hu-ease) both; animation-delay:calc(var(--i) * 70ms); }}
+.hu-step + .hu-step {{ padding-left:18px; border-left:1px solid var(--hu-border); }}
+.hu-step b {{ color:var(--hu-text); font-size:1rem; font-weight:600; }}
+.hu-step-num {{ font-size:2.6rem; line-height:1; color:var(--hu-text); }}
+.hu-step-icon {{ position:absolute; top:22px; right:18px; color:var(--hu-muted); display:inline-flex; }}
+.hu-prose {{ color:var(--hu-muted); font-size:0.97rem; line-height:1.7; max-width:62ch; }}
+.hu-prose b {{ color:var(--hu-text); font-weight:600; }}
+.hu-footer {{ margin-top:56px; padding-top:14px; border-top:1px solid var(--hu-text);
+  font-size:0.8rem; color:var(--hu-muted); line-height:1.7; display:grid;
+  grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:24px; }}
+.hu-footer .hu-mono {{ font-size:0.7rem; letter-spacing:.14em; text-transform:uppercase; text-align:right; }}
 
-/* --- Sekmeler: segmentli kontrol + kayan seçim zemini ------------------------------------
-   Streamlit 1.64 sekmeleri react-aria ile çizer. Tek bir SelectionIndicator öğesi seçili
-   sekmeye 'translate' geçişiyle taşınır; onu alt çizgi yerine sekmenin arkasındaki "hap"
-   zemine dönüştürüyoruz, böylece seçim sekmeler arasında kayar (mekânsal süreklilik). */
-[data-testid="stTabs"] [role="tablist"] {{
-  display:inline-flex; gap:4px; padding:5px; width:auto; max-width:100%;
-  background:var(--hu-surface-alt); border:1px solid var(--hu-border); border-radius:14px;
-  overflow-x:auto; scrollbar-width:none; margin-bottom:var(--hu-space-4);
-}}
-[data-testid="stTabs"] [role="tablist"]::-webkit-scrollbar {{ display:none; }}
-[data-testid="stTab"] {{
-  position:relative; height:40px; padding:0 16px; border-radius:10px; cursor:pointer;
-  color:var(--hu-muted); white-space:nowrap; transition:color 200ms ease, background-color 200ms ease;
-}}
-[data-testid="stTab"] > :not(.react-aria-SelectionIndicator) {{ position:relative; z-index:1; }}
-[data-testid="stTab"] p {{ font-weight:500; color:inherit; margin:0; font-size:0.92rem; }}
-[data-testid="stTab"]:hover:not([data-selected="true"]) {{
-  color:var(--hu-text); background:color-mix(in srgb, var(--hu-surface) 55%, transparent);
-}}
-[data-testid="stTab"][data-selected="true"] {{ color:var(--hu-data); }}
-[data-testid="stTab"][data-selected="true"] p {{ font-weight:600; }}
-[data-testid="stTab"] [data-testid="stIconMaterial"] {{ font-size:1.15rem; }}
-.stApp [data-testid="stTabs"] [data-testid="stTab"] .react-aria-SelectionIndicator {{
-  position:absolute !important; inset:0 !important; width:auto !important; height:auto !important;
-  z-index:0 !important; border-radius:10px !important;
-  background:var(--hu-surface) !important;
-  box-shadow:0 1px 2px rgba(15,23,42,.10), 0 1px 3px rgba(15,23,42,.06) !important;
-  transition:translate 280ms var(--hu-ease) !important;
-}}
-@keyframes hu-panel-in {{ from {{ opacity:0; transform:translateY(6px); }}
-                         to {{ opacity:1; transform:none; }} }}
-[data-testid="stTabPanel"]:not([inert]) {{ animation:hu-panel-in 240ms var(--hu-ease); }}
+/* --- Yükleme iskeleti ---------------------------------------------------------------- */
+@keyframes hu-breathe {{ 0%, 100% {{ opacity:.35; }} 50% {{ opacity:1; }} }}
+.hu-skeleton {{ display:flex; flex-direction:column; gap:22px; padding-top:6px; }}
+.hu-skel {{ border-radius:2px; background-image:radial-gradient(var(--hu-border) 1.6px, transparent 1.8px);
+  background-size:10px 10px; animation:hu-breathe 1.6s ease-in-out infinite; }}
+.hu-skel-row {{ display:grid; grid-template-columns:7fr 5fr; gap:32px; }}
+.hu-skel-cards {{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px; }}
+.hu-skel-note {{ font-family:{MONO} !important; font-size:0.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--hu-muted); }}
+.hu-sr {{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }}
 
-/* --- İstasyon seçimi (pills) ---------------------------------------------------------- */
-[data-testid="stButtonGroup"] button {{ border-radius:999px !important; min-height:36px;
+/* --- Streamlit denetimleri ---------------------------------------------------------- */
+[data-testid="stButtonGroup"] button {{ border-radius:2px !important; min-height:36px;
+  font-family:{MONO} !important; letter-spacing:.06em; border-color:var(--hu-border) !important;
   transition:background-color 150ms ease, color 150ms ease, border-color 150ms ease; }}
-
-/* --- Grafik kapları ------------------------------------------------------------------- */
-[data-testid="stPlotlyChart"], [data-testid="stDataFrame"] {{
-  border:1px solid var(--hu-border); border-radius:var(--hu-radius); padding:8px;
-  background:var(--hu-surface); box-shadow:var(--hu-shadow); overflow:hidden; }}
-[data-testid="stExpander"] details {{ border-radius:var(--hu-radius); border-color:var(--hu-border);
-  background:var(--hu-surface); }}
-:focus-visible {{ outline:2px solid var(--hu-data) !important; outline-offset:2px; }}
+[data-testid="stButtonGroup"] button p {{ font-family:{MONO} !important; font-size:0.78rem; }}
+[data-testid="stButtonGroup"] button {{ background:transparent !important; color:var(--hu-text) !important; }}
+[data-testid="stButtonGroup"] button:hover {{ border-color:var(--hu-text) !important; }}
+[data-testid="stButtonGroup"] button[aria-checked="true"] {{ background:var(--hu-text) !important;
+  color:var(--hu-bg) !important; border-color:var(--hu-text) !important; }}
+[data-testid="stButtonGroup"] button[aria-checked="true"] p {{ color:var(--hu-bg) !important; }}
+[data-testid="stPlotlyChart"] {{ border-top:1px solid var(--hu-border); padding-top:8px; }}
+/* Harita karoları soğuk gri: kâğıt tonuna hafifçe ısıtılır */
+[class*="st-key-map-"] [data-testid="stPlotlyChart"] {{ border-top:0; padding-top:0;
+  filter:{"sepia(.22) saturate(.9)" if t.name == "light" else "sepia(.12)"}; }}
+[data-testid="stExpander"] details {{ border-radius:2px; border-color:var(--hu-border); background:transparent; }}
+[data-testid="stExpander"] summary p {{ font-family:{MONO} !important; font-size:0.8rem; letter-spacing:.04em; }}
+:focus-visible {{ outline:2px solid var(--hu-ember) !important; outline-offset:3px; }}
 @media (prefers-reduced-motion: reduce) {{ * {{ transition:none !important; animation:none !important; }} }}
-@media (max-width: 900px) {{
-  .hu-hero {{ grid-template-columns:1fr; padding:22px 20px; gap:20px; }}
-}}
+
+/* Harita: sunucu yakınlığı seçer, CSS ekran genişliğine göre görünümü */
 .st-key-map-narrow {{ display:none; }}
+@media (max-width: 900px) {{
+  .hu-hero {{ grid-template-columns:1fr; gap:24px; }}
+  .hu-hero-side {{ border-left:0; padding-left:0; border-top:1px solid var(--hu-border); padding-top:16px; }}
+  .hu-kpis {{ grid-template-columns:1fr 1fr; }}
+  .hu-kpi:nth-child(3) {{ border-left:0; padding-left:0; }}
+  .hu-kpi:nth-child(n+3) {{ border-top:1px solid var(--hu-border); }}
+}}
 @media (max-width: 640px) {{
   .st-key-map-wide {{ display:none; }} .st-key-map-narrow {{ display:block; }}
-  .stMarkdown h1.hu-title {{ font-size:1.35rem !important; }}
-  .hu-hero-title {{ font-size:1.3rem; }}
-  .hu-hero-value {{ font-size:3rem; }}
-  .hu-stat {{ padding:12px 10px; }} .hu-stat-value {{ font-size:1.45rem; }}
-  .block-container {{ padding-left:1rem; padding-right:1rem; }}
-  /* Sıralama: ad üstte tam genişlikte, çubuk ve değer altta */
-  .hu-rank-row {{ grid-template-columns:1fr 30px; grid-template-areas:"name name" "track value";
-    row-gap:4px; padding:6px 6px; }}
-  .hu-rank-name {{ grid-area:name; }} .hu-rank-track {{ grid-area:track; }}
-  .hu-rank-value {{ grid-area:value; }}
-  .hu-rank-axis {{ grid-template-columns:1fr 30px; }} .hu-rank-axis > span:first-child {{ display:none; }}
-  .hu-bar-row {{ grid-template-columns:minmax(110px, 42%) 1fr 44px; }}
-  .hu-hour-lbl {{ font-size:0.62rem; }}
+  .block-container {{ padding-left:1rem; padding-right:1rem; padding-top:1.4rem; }}
+  .hu-rank-row {{ grid-template-columns:1fr 64px; grid-template-areas:"name value" "bar bar"; gap:4px 12px;
+    padding:10px 0; }}
+  .hu-rank-name {{ grid-area:name; }} .hu-rank-value {{ grid-area:value; }}
+  .hu-rank-row > svg {{ grid-area:bar; }}
+  .hu-rank-value .hu-num {{ font-size:2rem; }} .hu-rank-value-cat {{ display:none; }}
+  .hu-axis {{ grid-template-columns:1fr; }} .hu-axis > span:not(.hu-axis-ticks) {{ display:none; }}
+  .hu-section .hu-fig {{ display:none; }}
+  .stMarkdown h2.hu-section-title {{ font-size:1.6rem !important; }}
+  .hu-bar-row {{ grid-template-columns:minmax(110px, 42%) 1fr 48px; }}
+  .hu-footer {{ grid-template-columns:1fr; }} .hu-footer .hu-mono {{ text-align:left; }}
+  .hu-colophon {{ text-align:left; }}
+  .hu-skel-row {{ grid-template-columns:1fr; }}
 }}
 </style>"""
 
@@ -463,7 +453,7 @@ h1, h2, h3, h4 {{ font-weight: 650; letter-spacing: -0.01em; color: var(--hu-tex
 def card_rules(styles: dict[str, str]) -> str:
     """Kart kaplarına kategori rengi ve kademeli belirme gecikmesi (kap satır içi stil almaz).
     styles: {streamlit_key: kategori rengi}."""
-    rules = "".join(f".st-key-{k}{{--hu-cat:{c};animation-delay:{i * 45}ms}}"
+    rules = "".join(f".st-key-{k}{{--hu-cat:{c};animation-delay:{i * 55}ms}}"
                     for i, (k, c) in enumerate(styles.items()))
     return f"<style>{rules}</style>"
 
@@ -473,16 +463,20 @@ def card_rules(styles: dict[str, str]) -> str:
 # ---------------------------------------------------------------------------------------------
 def plotly_layout(t: Tokens, **overrides) -> dict:
     base = {
-        "font": {"family": "Fira Sans, system-ui, sans-serif", "color": t.text, "size": 13},
+        "font": {"family": "Instrument Sans, system-ui, sans-serif", "color": t.text, "size": 13},
         "paper_bgcolor": "rgba(0,0,0,0)",
         "plot_bgcolor": "rgba(0,0,0,0)",
         "margin": {"l": 8, "r": 8, "t": 8, "b": 8},
-        "hoverlabel": {"bgcolor": t.surface, "bordercolor": t.border,
-                       "font": {"family": "Fira Sans, sans-serif", "color": t.text}},
-        "xaxis": {"gridcolor": t.grid, "linecolor": t.border, "zeroline": False,
-                  "tickfont": {"color": t.muted}},
+        "hoverlabel": {"bgcolor": t.surface, "bordercolor": t.text,
+                       "font": {"family": "IBM Plex Mono, monospace", "color": t.text,
+                                "size": 12}},
+        "xaxis": {"gridcolor": t.grid, "linecolor": t.text, "zeroline": False,
+                  "tickfont": {"color": t.muted, "family": "IBM Plex Mono, monospace",
+                               "size": 11}},
         "yaxis": {"gridcolor": t.grid, "linecolor": t.border, "zeroline": False,
-                  "tickfont": {"color": t.muted}, "title": {"font": {"color": t.muted}}},
+                  "tickfont": {"color": t.muted, "family": "IBM Plex Mono, monospace",
+                               "size": 11},
+                  "title": {"font": {"color": t.muted, "size": 12}}},
         "legend": {"font": {"color": t.muted, "size": 12}, "bgcolor": "rgba(0,0,0,0)"},
         "separators": ",.",   # Türkçe: ondalık virgül, binlik nokta
     }

@@ -112,7 +112,11 @@ Uç noktalar: `/health`, `/stations`, `/forecast/{station}`, `/alerts?only_alert
 pip install -e ".[api,ui]"
 make ui      # http://localhost:8501
 ```
-- **Genel bakış:** Tek cümlelik genel durum, kategori dağılımı ve uyarı sayıları; değerlerin üzerinde yazılı olduğu harita; tüm istasyonları tahmin ve %80'lik aralıklarıyla tek ölçekte gösteren sıralama; son 48 saatin ölçümünü ve önümüzdeki 24 saatin tahminini gösteren mini grafikli istasyon kartları.
+- **Tasarım dili, "Parçacık Defteri":** Pano, bir gözlem defterinin sayfası gibi tasarlandı: kâğıt ve mürekkep tonları, ince çizgiler, dev serif rakamlar ve mono etiketler. PM2.5 değeri noktaların yoğunluğuyla gösterilir; köz kırmızısı yalnızca resmî eşik ve uyarı için kullanılır. Tasarım felsefesi ve levha: [docs/tasarim](docs/tasarim/parcacik-defteri.md)
+
+<p align="center"><img src="docs/tasarim/parcacik-defteri.png" alt="Parçacık Defteri levhası: istasyonlar parçacık bantları olarak, resmî eşik köz çizgisiyle" width="60%"></p>
+
+- **Genel bakış:** Tek cümlelik genel durum ve en yüksek tahmin; tüm istasyonları aynı ölçekte parçacık bantları olarak gösteren şekil (yoğunluk = tahmin, soluk kuyruk = %80'lik aralık); okuma anahtarıyla harita; son 48 saatin ölçümünü ve önümüzdeki 24 saatin tahminini gösteren istasyon kartları.
 - **İstasyon detayı:** 24 saat sonrası için tahmin, %80'lik aralık, uyarı durumu ve genel sağlık bilgilendirmesi; önümüzdeki 24 saatin saat saat tahmini; son 72 saatin ölçümü ve aynı saatler için verilmiş tahminler; "Bu tahmin neden böyle?" açıklaması. Karttaki **Ayrıntılar** düğmesi bu sekmeyi açar; seçili istasyon adreste tutulur (`?istasyon=izmir_konak`), bağlantı paylaşılabilir.
 - **Model performansı:** Referans yöntemlerle hata karşılaştırması, uyarı dengesi, kalibrasyon ve özellik ailelerinin katkı payları.
 - Açık ve koyu tema, telefon ekranına uyumlu düzen, yükleme iskeleti ve azaltılmış hareket tercihi desteklenir. Metinler Türkçe yazım kurallarına, renk kontrastları erişilebilirlik ölçütlerine (WCAG AA) uygundur.

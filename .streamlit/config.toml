@@ -9,16 +9,16 @@ gatherUsageStats = false
 # Geliştirici menüsü yerine sade araç çubuğu
 toolbarMode = "minimal"
 
-# Tasarım sistemi: src/havauyari/ui/theme.py ile aynı renkler. Açık ve koyu tema ayrı
+# Tasarım sistemi (Parçacık Defteri): src/havauyari/ui/theme.py ile aynı renkler. Açık ve koyu tema ayrı
 # tanımlanır; böylece Streamlit sistem tercihine göre geçiş yapar ve özel CSS ile uyumlu kalır.
 [theme.light]
-primaryColor = "#2563EB"
-backgroundColor = "#F6F8FB"
-secondaryBackgroundColor = "#EEF2F7"
-textColor = "#0F172A"
+primaryColor = "#2B4C7E"
+backgroundColor = "#F3EFE7"
+secondaryBackgroundColor = "#EAE4D8"
+textColor = "#1C1B19"
 
 [theme.dark]
-primaryColor = "#60A5FA"
-backgroundColor = "#0B1220"
-secondaryBackgroundColor = "#141C2E"
-textColor = "#F8FAFC"
+primaryColor = "#93B4E6"
+backgroundColor = "#12110F"
+secondaryBackgroundColor = "#191815"
+textColor = "#EDE7DC"

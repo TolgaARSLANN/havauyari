@@ -176,6 +176,39 @@ def test_new_overview_fragments(forecast):
     assert 'role="status"' in skeleton_html()
 
 
+def test_station_code_and_particles_are_stable():
+    from havauyari.ui.components import particles_svg, station_code
+
+    assert station_code("İzmir - Konak") == "İZM · KNK"
+    assert station_code("Ankara - Keçiören Sanatoryum") == "ANK · KÇR"
+    assert station_code("Kocaeli") == "KOC"
+    a = particles_svg(7, 25.0, 13.0, 39.0, 50.0, "#D4A53A", "#1C1B19")
+    particles_svg.cache_clear()
+    b = particles_svg(7, 25.0, 13.0, 39.0, 50.0, "#D4A53A", "#1C1B19")
+    assert a == b                                            # her çizimde aynı noktalar
+    assert a.count("<circle") > particles_svg(7, 5.0, 1.0, 9.0, 50.0, "#D4A53A", "x").count(
+        "<circle")                                           # yoğunluk değerle artar
+
+
+def test_uppercase_labels_protect_micro_sign(service, monkeypatch):
+    """CSS büyük harf dönüşümü µ'yü Yunanca Mu'ya çevirir ("MG/M³"): büyük harfli etiketlerde
+    birim .hu-u ile korunmalı."""
+    import re
+
+    from streamlit.testing.v1 import AppTest
+
+    import havauyari.ui.state as ui_state
+
+    monkeypatch.setattr(ui_state, "SERVICE_FACTORY", lambda: service)
+    at = AppTest.from_file(str(APP), default_timeout=60)
+    at.run()
+    body = " ".join(m.value for m in at.markdown)
+    upper = re.findall(r'class="(?:hu-label|hu-eyebrow|hu-kpi-label|hu-mono)"[^>]*>(.*?)</div>',
+                       body)
+    for label in upper:
+        assert "µ" not in re.sub(r'<span class="hu-u">.*?</span>', "", label), label
+
+
 def test_map_has_narrow_variant():
     from havauyari.ui.components import map_figure
 

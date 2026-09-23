@@ -356,10 +356,27 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
 
 ## FAZ 5: Tahmin Servisi (API) · ~3-4 gün
 
-- [ ] **5.1 Tahmin pipeline'ı**: `predict.py`: son veriyi çek → özellik → tahmin → AQI → uyarı
-- [ ] **5.2 FastAPI**: `GET /health`, `GET /forecast/{city}?hours=24`, `GET /alerts`, Pydantic şemaları
-- [ ] **5.3 API testleri** (`TestClient`)
-- [ ] **5.4 Önbellek**: aynı saat içindeki tekrar isteklerde Open-Meteo'ya gitmeme
+- [x] **5.1 Tahmin pipeline'ı**: `predict.py`: son veriyi çek → özellik → tahmin → AQI → uyarı
+  - `serving/data.py` (canlı veri, eğitimle aynı sütun yapısı) + `serving/service.py`
+    (eğitimdeki AYNI temizlik ve özellik fonksiyonları → tahmin, %80 aralık, AQI, istasyon
+    eşiğiyle uyarı, "risk" bayrağı, 5 özellikli açıklama).
+  - Canlı kaynaklar: SİM son 10 gün, Open-Meteo CAMS (geçmiş+tahmin), Open-Meteo Forecast API'nin
+    geçmiş günleri (eğitimde ERA5 arşivi; arşiv ~5 gün gecikmeli olduğu için canlıda
+    kullanılamıyor → küçük kaynak farkı), day1 hava tahmini için eğitimle aynı Previous Runs API.
+  - İstasyon listesi repoya alındı: `models/stations.json` (SİM kimliği, koordinat, şehir).
+- [x] **5.2 FastAPI**: `GET /health`, `GET /forecast/{city}?hours=24`, `GET /alerts`, Pydantic şemaları
+  - `serving/app.py`: `/health`, `/stations`, `/forecast/{station}`, `/alerts?only_alerts=`;
+    şehir yerine istasyon bazlı (hedef istasyon ölçümü), ufuk 24 s sabit. `/docs` otomatik.
+  - Model dosyası yoksa servis çökmez: `/health` "model yok" döner, diğerleri 503.
+- [x] **5.3 API testleri** (`TestClient`)
+  - `tests/test_api.py` (9 test): ağ ve gerçek model gerektirmez (sahte sağlayıcı + sentetik
+    küçük model). Katkıların tahmini açıkladığı, gelecekteki gözlemlerin tahmini
+    değiştirmediği, eski veride 503, bilinmeyen istasyonda 404 test ediliyor.
+- [x] **5.4 Önbellek**: aynı saat içindeki tekrar isteklerde Open-Meteo'ya gitmeme
+  - (istasyon, saat) anahtarlı bellek içi önbellek; yeni saatte eskiler silinir.
+- **Canlı doğrulama (2026-09-23 13:00):** 8 istasyonun hepsinde tahmin üretildi (istasyon başına
+  ~1,3 sn, önbellekten ~0 sn). Uyarı yok; İzmir-Konak'ta "risk" (tahmin 23,7, aralık 11,6–37,8).
+  uvicorn üzerinden tüm uç noktalar doğrulandı.
 
 ## FAZ 6: Kullanıcı Arayüzü (Streamlit) · ~4-5 gün
 

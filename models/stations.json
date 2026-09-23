@@ -1,0 +1,82 @@
+[
+  {
+    "slug": "ankara_kecioren_sanatoryum",
+    "sim_id": "c960495f-431d-43ef-a4a2-dc663214b73a",
+    "name": "Ankara - Keçiören Sanatoryum",
+    "city": "ankara",
+    "lat": 39.99904,
+    "lon": 32.85606,
+    "area_type": "Kentsel",
+    "source_type": "Isınma"
+  },
+  {
+    "slug": "ankara_etimesgut",
+    "sim_id": "b6cee520-e791-43ad-8584-be4a6cdb89bc",
+    "name": "Ankara - Etimesgut",
+    "city": "ankara",
+    "lat": 39.93982,
+    "lon": 32.64,
+    "area_type": "Kentsel",
+    "source_type": "Isınma"
+  },
+  {
+    "slug": "bursa",
+    "sim_id": "8c0447cf-a815-4811-868c-2ae7051f8d2f",
+    "name": "Bursa",
+    "city": "bursa",
+    "lat": 40.21646,
+    "lon": 29.03531,
+    "area_type": "Kentsel",
+    "source_type": "Isınma"
+  },
+  {
+    "slug": "bursa_kultur_park_mthm",
+    "sim_id": "6d7379b2-a240-4670-ab65-b04671c43373",
+    "name": "Bursa - Kültür Park-MTHM",
+    "city": "bursa",
+    "lat": 40.19574,
+    "lon": 29.04615,
+    "area_type": "Kentsel",
+    "source_type": "Isınma"
+  },
+  {
+    "slug": "istanbul_sultangazi_mthm",
+    "sim_id": "575665d7-e92d-4a1c-bc0d-ea9d5dcc5ed9",
+    "name": "İstanbul - Sultangazi-MTHM",
+    "city": "istanbul",
+    "lat": 41.10771,
+    "lon": 28.87432,
+    "area_type": "Kentsel",
+    "source_type": "Trafik"
+  },
+  {
+    "slug": "istanbul_umraniye_mthm",
+    "sim_id": "c83902d3-a077-48aa-83b5-046ce9d13027",
+    "name": "İstanbul - Ümraniye-MTHM",
+    "city": "istanbul",
+    "lat": 41.02444,
+    "lon": 29.09975,
+    "area_type": "Kentsel",
+    "source_type": "Trafik"
+  },
+  {
+    "slug": "izmir_konak",
+    "sim_id": "862bd2b3-3434-4a69-8b7a-1b9dccdec63c",
+    "name": "İzmir - Konak",
+    "city": "izmir",
+    "lat": 38.42389,
+    "lon": 27.14073,
+    "area_type": "Kentsel",
+    "source_type": "Trafik"
+  },
+  {
+    "slug": "kocaeli",
+    "sim_id": "15658d72-2e89-442c-b167-9d742a8f6348",
+    "name": "Kocaeli",
+    "city": "kocaeli",
+    "lat": 40.76452,
+    "lon": 29.94931,
+    "area_type": "Kentsel",
+    "source_type": "Isınma"
+  }
+]

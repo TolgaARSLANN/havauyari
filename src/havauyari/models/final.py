@@ -188,8 +188,27 @@ def build_report(booster: lgb.Booster, feats: pd.DataFrame, cols: list[str]) -> 
     ])
 
 
+REGISTRY_PATH = MODELS_DIR / "stations.json"
+
+
+def write_station_registry() -> list[dict]:
+    """Servisin kullanacağı istasyon listesi (SİM kimliği, ad, şehir, koordinat) repoya yazılır."""
+    from havauyari.data.fetch_sim import SURVEY_PATH, select_stations, slugify
+
+    selected = select_stations(pd.read_csv(SURVEY_PATH))
+    registry = [{"slug": slugify(r["name"]), "sim_id": r["id"], "name": r["name"],
+                 "city": r["city"], "lat": float(r["lat"]), "lon": float(r["lon"]),
+                 "area_type": r["area_type"], "source_type": r["source_type"]}
+                for _, r in selected.iterrows()]
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    REGISTRY_PATH.write_text(json.dumps(registry, ensure_ascii=False, indent=2), encoding="utf-8")
+    return registry
+
+
 def main() -> None:
     from havauyari.models.train_station import prepare
+
+    write_station_registry()
 
     feats = prepare(HORIZON)
     model, cols = train_final(feats)

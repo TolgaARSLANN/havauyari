@@ -1,5 +1,11 @@
 .PHONY: install data quality process train baselines test lint \
-        sim-survey sim-data forecasts stations train-station
+        sim-survey sim-data forecasts stations train-station final api
+
+final:
+	python -m havauyari.models.final
+
+api:
+	uvicorn havauyari.serving.app:app --reload
 
 sim-survey:
 	python -m havauyari.data.fetch_sim survey
@@ -17,7 +23,7 @@ train-station:
 	python -m havauyari.models.train_station
 
 install:
-	pip install -e ".[dev,ml,serve]"
+	pip install -e ".[dev,api,ui]"
 
 data:
 	python -m havauyari.data.fetch_openmeteo

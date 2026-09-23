@@ -70,22 +70,58 @@ make train-station # istasyon hedefli geri test -> reports/backtest_istasyon_h24
 make data quality process
 make train
 
-make test          # birim testleri (80)
+make final         # final model + açıklanabilirlik -> models/, reports/aciklanabilirlik_h24.md
+make test          # birim testleri (110)
 ```
+
+## Tahmin API'si
+```bash
+pip install -e ".[api]"
+make final   # model dosyasını üretir (git dışı, ~2 dk)
+make api     # http://127.0.0.1:8000/docs
+```
+
+```bash
+curl http://127.0.0.1:8000/forecast/izmir_konak
+```
+
+Örnek yanıt (kısaltılmış, 2026-09-23 13:00):
+```json
+{
+  "station": "izmir_konak",
+  "issued_at": "2026-09-23T13:00:00",
+  "target_time": "2026-09-24T13:00:00",
+  "pm25": 23.7,
+  "interval_80": {"low": 11.6, "high": 37.8},
+  "aqi": 78,
+  "category": "Orta",
+  "alert": {"is_alert": false, "decision_threshold": 32.0, "official_threshold": 35.5, "risk": true},
+  "explanation": {
+    "base_value": 19.47,
+    "top_features": [
+      {"feature": "station_pm25", "family": "istasyon PM2.5 geçmişi", "value": 31.34, "contribution": 4.12},
+      {"feature": "fc_win_wind_mean", "family": "hava tahmini (o gün yayımlanan)", "value": 9.17, "contribution": -3.12}
+    ]
+  }
+}
+```
+Uç noktalar: `/health`, `/stations`, `/forecast/{station}`, `/alerts?only_alerts=true`. Aynı saat içindeki tekrar istekler önbellekten döner.
 
 ## Proje Yapısı
 ```
 src/havauyari/
-├─ data/        # veri çekme, kalite raporu, temizlik
-├─ features/    # zaman serisi özellikleri
-├─ models/      # baseline'lar, eğitim, walk-forward değerlendirme
-├─ evaluation/  # regresyon ve alarm metrikleri
-├─ alerts/      # konsantrasyon -> AQI dönüşümü, uyarı kuralları
+├─ data/        # veri çekme (SİM, Open-Meteo), kalite raporları, temizlik
+├─ features/    # zaman serisi ve hava tahmini özellikleri
+├─ models/      # referanslar, geri test, deneyler, aralıklar, final model
+├─ evaluation/  # walk-forward çerçevesi, metrikler, hata analizi
+├─ alerts/      # AQI dönüşümü, walk-forward uyarı eşikleri
+├─ serving/     # canlı veri, tahmin akışı, FastAPI uygulaması
 └─ config.py
-notebooks/      # EDA ve deneyler
-reports/        # veri kalite raporu ve grafikler
+models/         # model kartı, istasyon listesi, eşik ve aralık tabloları (model dosyası git dışı)
+notebooks/      # EDA
+reports/        # kalite, geri test, hata analizi, deney ve açıklanabilirlik raporları
 docs/           # yol haritası
-tests/          # birim testleri (AQI, temizlik, sızıntı kontrolü, metrikler)
+tests/          # birim ve uçtan uca testler (sızıntı, geri test, API)
 ```
 
 ## Sonuçlar
@@ -124,7 +160,7 @@ Ayrıntılı alt fazlar ve alınan kararlar: [docs/YOL_HARITASI.md](docs/YOL_HAR
 - [x] Hata analizi, istasyon bazlı uyarı eşiği, tahmin aralıkları, açıklanabilirlik (SHAP), final model
 - [x] Deney takibi: MLflow yerine hafif kayıt (`reports/deney_kaydi.csv` + `models/model_card.json`)
 - [ ] Optuna ile hiperparametre araması (isteğe bağlı; zirve deneyi sınırın parametrede değil bilgide olduğunu gösterdi)
-- [ ] FastAPI (`/forecast/{station}`, `/alerts`)
+- [x] Tahmin API'si (FastAPI): `/forecast/{station}`, `/alerts`, `/stations`, `/health`
 - [ ] Streamlit panosu + Türkiye haritası
 - [ ] Docker + GitHub Actions ile günlük otomatik tahmin
 - [ ] Hugging Face Spaces'e deploy

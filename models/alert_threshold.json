@@ -1,0 +1,9 @@
+{
+  "model": "lgbm_gercekci",
+  "horizon_h": 24,
+  "decision_threshold_ugm3": 28.5,
+  "official_threshold_ugm3": 35.5,
+  "target_recall": 0.8,
+  "calibrated_on": "2024-09-28 → 2026-09-16",
+  "created": "2026-09-23"
+}

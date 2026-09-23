@@ -281,8 +281,22 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
     14 Ocak 2026 epizodu hiç öngörülememiş (gerçek ort. 70–86, tahmin ~20): ani başlayan
     olaylar hâlâ zayıf nokta.
   - Hedef saate göre hata dengeli (MAE 5,7–7,5), belirgin bir saat sorunu yok.
-- [ ] **4.4 Uyarı eşiği ayarı**: kaçırılan alarmı azaltmak için eşik kaydırma
+- [x] **4.4 Uyarı eşiği ayarı**: kaçırılan alarmı azaltmak için eşik kaydırma
   - Bitti sayılır: "Sağlıksız" seviyesinde recall ≥ 0.80
+  - Kapsam güncellemesi: ana uyarı seviyesi 35,5 (Faz 1.4 kararı); ürün kararı olarak hedef
+    **recall ≥ %80** seçildi (hassas grupları korumak öncelikli, yanlış alarm ikincil).
+  - Yöntem (`alerts/threshold.py`): gerçek uyarının tanımı değişmez (ölçüm ≥ 35,5); modelin
+    tahminine uygulanan karar eşiği ayarlanır. 24 aylık geri test; son 12 pencerenin her birinde
+    eşik yalnızca ÖNCEKİ pencerelerin tahminlerinden, recall ≥ %80 sağlayan en yüksek değer
+    olarak seçildi (test dönemi görülmedi).
+  - **Sonuç (son 12 ay):** recall 0,657 → **0,824** (hedef sağlandı), precision 0,734 → 0,572,
+    uyarı saati istasyon başına haftada 21 → 34. Seçilen eşikler kararlı: 28,0–29,5.
+  - Canlı sistem eşiği: **28,5 µg/m³** (`models/alert_threshold.json`).
+  - Zayıf yanlar: (1) yaz aylarında gerçek uyarı az olduğundan precision 0,15–0,32'ye düşüyor
+    (yazın yanlış alarm oranı yüksek) → mevsime göre eşik denenebilir. (2) Tek küresel eşik
+    uyarının sık olduğu İzmir/Bursa'ya göre ayarlanıyor; İstanbul-Ümraniye 0,39,
+    Ankara-Keçiören 0,48, İstanbul-Sultangazi 0,55'te kalıyor → istasyon bazlı eşik ileride
+    değerlendirilebilir. Rapor: [`reports/uyari_esigi_h24.md`](../reports/uyari_esigi_h24.md)
 - [ ] **4.5 Tahmin aralığı**: quantile LightGBM (%10–%90 bandı)
 - [ ] **4.6 SHAP**: global önem + tek tahmin açıklaması
 - [ ] **4.7 Final model kaydı**: `models/` altında sürümlü model + metrik JSON

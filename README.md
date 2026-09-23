@@ -104,6 +104,8 @@ tests/          # birim testleri (AQI, temizlik, sızıntı kontrolü, metrikler
 
 - Ortalama hata ham CAMS'a göre **%47,7**, en iyi basit referansa göre **%25,4** daha düşük.
 - Uyarıların yakalanma oranı 0,25'ten **0,66'ya** çıkarken isabet de 0,36'dan **0,73'e** yükseliyor: hem daha çok uyarı yakalanıyor hem daha az yanlış alarm veriliyor.
+- **Uyarı eşiği ayarı:** Model zirveleri bastırdığı için karar eşiği, yakalama oranı en az %80 olacak şekilde *yalnızca geçmiş tahminlerden* seçildi (28,5 µg/m³). Son 12 ayda uyarıların **%82,4'ü** yakalandı (sabit 35,5 eşikle %65,7). Bedeli daha çok yanlış alarm: isabet %73'ten %57'ye iniyor. [Ayrıntılar](reports/uyari_esigi_h24.md)
+- **Yeni başlayan kirlilik:** 24 saat sonra başlayacak uyarıların %34'ü önceden görülüyor ("yarın da bugün gibi" yöntemi %0, CAMS %26). [Hata analizi](reports/hata_analizi_istasyon_h24.md)
 - **Uygulanabilirlik:** Ana model yalnızca bugün erişilebilen verileri kullanır (istasyon geçmişi, CAMS'ın şu ana kadarki değerleri, o gün yayımlanmış hava tahmini). "Üst sınır" modeli ek olarak CAMS'ın gelecek değerlerini görür; aradaki farkın küçük olması, sonucun CAMS'ın tahmin başarısına bağımlı olmadığını gösteriyor.
 - İstasyon ve mevsim kırılımları: [reports/backtest_istasyon_h24.md](reports/backtest_istasyon_h24.md)
 

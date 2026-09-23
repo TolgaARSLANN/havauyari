@@ -13,12 +13,12 @@ toolbarMode = "minimal"
 # tanımlanır; böylece Streamlit sistem tercihine göre geçiş yapar ve özel CSS ile uyumlu kalır.
 [theme.light]
 primaryColor = "#2563EB"
-backgroundColor = "#F8FAFC"
-secondaryBackgroundColor = "#F1F5F9"
+backgroundColor = "#F6F8FB"
+secondaryBackgroundColor = "#EEF2F7"
 textColor = "#0F172A"
 
 [theme.dark]
 primaryColor = "#60A5FA"
-backgroundColor = "#0F172A"
-secondaryBackgroundColor = "#1B2336"
+backgroundColor = "#0B1220"
+secondaryBackgroundColor = "#141C2E"
 textColor = "#F8FAFC"

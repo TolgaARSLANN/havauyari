@@ -136,6 +136,50 @@ def test_streamlit_app_renders_with_fake_service(service, monkeypatch):
         assert label.endswith(expected), label
     body = " ".join(m.value for m in at.markdown)
     for text in ("HavaUyarı", "Tahmin edilen saat", "Uyarı riski", "hu-station", "için tahmin",
-                 "Bu tahmin neden böyle?", 'lang="tr"'):
+                 "Bu tahmin neden böyle?", "hu-rank-row", "hu-hours", 'lang="tr"'):
         assert text in body, text
-    assert at.selectbox[0].options                      # istasyon seçimi dolu
+
+    # Kart düğmesi: istasyonu seçer, detay sekmesini açar ve adresi günceller
+    at.button(key="go-s2").click().run()
+    assert not at.exception, at.exception
+    assert at.session_state["istasyon"] == "s2"
+    assert at.session_state["nav"].endswith("İstasyon detayı")
+    assert at.query_params["istasyon"] == ["s2"]
+
+
+def test_new_overview_fragments(forecast):
+    from havauyari.ui.components import (
+        hero_html,
+        hourly_strip_html,
+        mae_bars_html,
+        pipeline_html,
+        ranking_html,
+        skeleton_html,
+        sparkline_svg,
+    )
+
+    rows = [{"name": "A", "pm25": 40.0, "low": 30.0, "high": 55.0,
+             "category": "Hassas gruplar için sağlıksız", "is_alert": True, "risk": True},
+            {"name": "B", "pm25": 12.0, "low": 5.0, "high": 20.0, "category": "Orta",
+             "is_alert": False, "risk": False}]
+    hero = hero_html(rows, "2026-09-24 16:00")
+    assert "1 istasyonda uyarı var" in hero and "24 Eylül, 16.00" in hero
+    assert 'role="heading"' in hero
+    rank = ranking_html(rows)
+    assert rank.count('class="hu-rank-row"') == 2 and "uyarı" in rank   # erişilebilir etiket
+    svg = sparkline_svg(forecast)
+    assert svg.startswith("<svg") and 'aria-hidden="true"' in svg
+    strip = hourly_strip_html(forecast)
+    assert strip.count('class="hu-hour"') == 24 and "zirvesi" in strip
+    assert mae_bars_html().count("hu-bar-row") == 7 and "hu-bar-ours" in mae_bars_html()
+    assert pipeline_html().count("hu-step") >= 5
+    assert 'role="status"' in skeleton_html()
+
+
+def test_map_has_narrow_variant():
+    from havauyari.ui.components import map_figure
+
+    rows = [{"name": "a", "lat": 40, "lon": 29, "pm25": 20, "category": "Orta",
+             "is_alert": False, "risk": False}]
+    wide, narrow = map_figure(rows), map_figure(rows, narrow=True)
+    assert narrow.layout.map.zoom < wide.layout.map.zoom

@@ -112,10 +112,10 @@ Uç noktalar: `/health`, `/stations`, `/forecast/{station}`, `/alerts?only_alert
 pip install -e ".[api,ui]"
 make ui      # http://localhost:8501
 ```
-- **Genel bakış:** İstasyonlar Türkiye haritasında yarınki tahmin kategorisinin rengiyle gösterilir; uyarı ve uyarı riski sayıları, istasyon kartları ve tablo görünümü yer alır.
-- **İstasyon detayı:** 24 saat sonrası için tahmin, %80'lik aralık, uyarı durumu ve genel sağlık bilgilendirmesi; son 72 saatin ölçümü, aynı saatler için verilmiş tahminler ve önümüzdeki 24 saatin tahmin eğrisi; "Bu tahmin neden böyle?" açıklaması.
-- **Model performansı:** Geri test sonuçları, uyarı dengesi ve kalibrasyon grafikleri.
-- Açık ve koyu tema desteklenir; metinler Türkçe yazım kurallarına, renk kontrastları erişilebilirlik ölçütlerine (WCAG AA) uygundur.
+- **Genel bakış:** Tek cümlelik genel durum, kategori dağılımı ve uyarı sayıları; değerlerin üzerinde yazılı olduğu harita; tüm istasyonları tahmin ve %80'lik aralıklarıyla tek ölçekte gösteren sıralama; son 48 saatin ölçümünü ve önümüzdeki 24 saatin tahminini gösteren mini grafikli istasyon kartları.
+- **İstasyon detayı:** 24 saat sonrası için tahmin, %80'lik aralık, uyarı durumu ve genel sağlık bilgilendirmesi; önümüzdeki 24 saatin saat saat tahmini; son 72 saatin ölçümü ve aynı saatler için verilmiş tahminler; "Bu tahmin neden böyle?" açıklaması. Karttaki **Ayrıntılar** düğmesi bu sekmeyi açar; seçili istasyon adreste tutulur (`?istasyon=izmir_konak`), bağlantı paylaşılabilir.
+- **Model performansı:** Referans yöntemlerle hata karşılaştırması, uyarı dengesi, kalibrasyon ve özellik ailelerinin katkı payları.
+- Açık ve koyu tema, telefon ekranına uyumlu düzen, yükleme iskeleti ve azaltılmış hareket tercihi desteklenir. Metinler Türkçe yazım kurallarına, renk kontrastları erişilebilirlik ölçütlerine (WCAG AA) uygundur.
 
 ## Proje Yapısı
 ```

@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import threading
 import time
 import unicodedata
 from dataclasses import dataclass
@@ -69,15 +70,24 @@ class SimClient:
         self.pause_s = pause_s
         self._token: str | None = None
         self._last_request = 0.0
+        # Pano istasyonları paralel çeker: istekler arası bekleme iş parçacıkları arasında da
+        # korunur (SİM'e saniyede en fazla 1/pause_s istek)
+        self._pace_lock = threading.Lock()
+        self._token_lock = threading.Lock()
 
     def _wait(self) -> None:
-        delay = self.pause_s - (time.monotonic() - self._last_request)
-        if delay > 0:
-            time.sleep(delay)
-        self._last_request = time.monotonic()
+        with self._pace_lock:
+            delay = self.pause_s - (time.monotonic() - self._last_request)
+            if delay > 0:
+                time.sleep(delay)
+            self._last_request = time.monotonic()
 
     @property
     def token(self) -> str:
+        with self._token_lock:
+            return self._fetch_token()
+
+    def _fetch_token(self) -> str:
         if self._token is None:
             self._wait()
             html = self.session.get(PAGE_URL, timeout=60).text

@@ -324,7 +324,16 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
     **Karar: istasyon bazlı eşiğe geçildi.** `models/alert_threshold.json` artık istasyon başına
     eşik (18,5–32,0) ve genel yedek eşik (28,5) içeriyor; okuma:
     `alerts.threshold.decision_threshold`.
-- [ ] **4.5 Tahmin aralığı**: quantile LightGBM (%10–%90 bandı)
+- [x] **4.5 Tahmin aralığı**: quantile LightGBM (%10–%90 bandı)
+  - Yöntem değişikliği: quantile model yerine **walk-forward conformal** (`models/intervals.py`):
+    geçmiş pencerelerin kalıntıları tahmin seviyesi dilimlerine (<10, 10–20, 20–30, 30–45,
+    ≥45) göre %10/%90 yüzdeliklerine çevrilir; yeniden eğitim gerekmez, test dönemi görülmez.
+  - **Sonuç (son 12 ay):** kapsama %82,9 (hedef %80), ortalama genişlik 23,2 µg/m³.
+    Kapsama kışın %74, yazın %90; gerçek ≥ 55,5 saatlerde %59 (nokta tahminin gizlediği
+    zirve riskinin bir kısmını gösteriyor). Örnek: tahmin 29,3 → aralık 16,5–45,3.
+  - "Üst sınır ≥ 35,5" koşulu gerçek uyarıların %95'ini kapsıyor (precision %39): kullanıcıya
+    "uyarı riski" olarak gösterilebilir. Canlı tablo: `models/prediction_interval.json`.
+    Rapor: [`reports/tahmin_araligi_h24.md`](../reports/tahmin_araligi_h24.md)
 - [ ] **4.6 SHAP**: global önem + tek tahmin açıklaması
 - [ ] **4.7 Final model kaydı**: `models/` altında sürümlü model + metrik JSON
 

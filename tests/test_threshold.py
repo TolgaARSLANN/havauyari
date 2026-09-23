@@ -78,6 +78,24 @@ def test_group_thresholds_use_own_history_and_fallback():
     assert fb[p["fold"] == 2].nunique() == 1
 
 
+def test_station_thresholds_and_decision_lookup():
+    from havauyari.alerts.threshold import decision_threshold, station_thresholds
+
+    rows = []
+    for st, scale, n_alert in (("a", 1.0, 100), ("b", 0.5, 100), ("c", 1.0, 5)):
+        y = np.r_[np.full(n_alert, 50.0), np.full(100, 5.0)]
+        rows.append(pd.DataFrame({"station": st, "y_true": y,
+                                  "y_pred": y * scale + np.linspace(-3, 3, len(y))}))
+    p = pd.concat(rows, ignore_index=True)
+    thr = station_thresholds(p, min_alerts=50)
+    assert thr["b"] < thr["a"]
+    fallback = threshold_for_recall(p["y_true"], p["y_pred"])
+    assert thr["c"] == fallback                       # az uyarılı istasyon -> genel eşik
+    config = {"stations": thr, "default_threshold_ugm3": fallback}
+    assert decision_threshold("b", config) == thr["b"]
+    assert decision_threshold("bilinmeyen", config) == fallback
+
+
 def test_apply_and_binary_metrics():
     p = _preds()
     q = apply_thresholds(p, {2: 25.0, 3: 30.0})

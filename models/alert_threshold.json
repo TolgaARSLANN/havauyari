@@ -1,9 +1,21 @@
 {
   "model": "lgbm_gercekci",
   "horizon_h": 24,
-  "decision_threshold_ugm3": 28.5,
+  "strategy": "station",
+  "default_threshold_ugm3": 28.5,
+  "stations": {
+    "ankara_etimesgut": 25.0,
+    "ankara_kecioren_sanatoryum": 18.5,
+    "bursa": 30.0,
+    "bursa_kultur_park_mthm": 30.5,
+    "istanbul_sultangazi_mthm": 24.0,
+    "istanbul_umraniye_mthm": 20.5,
+    "izmir_konak": 32.0,
+    "kocaeli": 28.0
+  },
   "official_threshold_ugm3": 35.5,
   "target_recall": 0.8,
+  "min_group_alerts": 50,
   "calibrated_on": "2024-09-28 → 2026-09-16",
   "created": "2026-09-23"
 }

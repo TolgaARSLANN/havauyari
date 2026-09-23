@@ -56,7 +56,18 @@ Aynı walk-forward kural, grup başına uygulanır; geçmişte grup için 50'den
 | mevsime göre | 0.825 | 0.555 | 0.663 | 0.259 | 0.385 | 35.525 |
 | istasyona göre | 0.798 | 0.548 | 0.650 | 0.320 | 0.714 | 34.753 |
 
-## Canlı sistem eşiği
+## Canlı sistem eşikleri (istasyon bazlı)
 
-Tüm 24 pencerenin tahminlerinden seçilen eşik: **28.5 µg/m³** (`models/alert_threshold.json`).
+Karar: istasyon bazlı eşik (en düşük istasyon recall'ü 0,39 → 0,71). Tüm 24 pencerenin tahminlerinden seçildi; genel (yedek) eşik **28.5 µg/m³**. Dosya: `models/alert_threshold.json`.
+
+| istasyon | eşik (µg/m³) |
+|---|---|
+| ankara_etimesgut | 25.0 |
+| ankara_kecioren_sanatoryum | 18.5 |
+| bursa | 30.0 |
+| bursa_kultur_park_mthm | 30.5 |
+| istanbul_sultangazi_mthm | 24.0 |
+| istanbul_umraniye_mthm | 20.5 |
+| izmir_konak | 32.0 |
+| kocaeli | 28.0 |
 

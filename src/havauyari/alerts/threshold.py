@@ -231,12 +231,38 @@ def build_report(preds: pd.DataFrame, thresholds: dict[int, float], final: float
         "",
         to_markdown(compare_strategies(preds, sorted(thresholds)), ".3f"),
         "",
-        "## Canlı sistem eşiği",
+        "## Canlı sistem eşikleri (istasyon bazlı)",
         "",
-        f"Tüm {preds['fold'].nunique()} pencerenin tahminlerinden seçilen eşik: **{final} µg/m³** "
-        f"(`{THRESHOLD_PATH.relative_to(ROOT).as_posix()}`).",
+        "Karar: istasyon bazlı eşik (en düşük istasyon recall'ü 0,39 → 0,71). Tüm "
+        f"{preds['fold'].nunique()} pencerenin tahminlerinden seçildi; genel (yedek) eşik "
+        f"**{final} µg/m³**. Dosya: `{THRESHOLD_PATH.relative_to(ROOT).as_posix()}`.",
+        "",
+        to_markdown(pd.Series(station_thresholds(preds), name="eşik (µg/m³)")
+                    .rename_axis("istasyon"), ".1f"),
         "",
     ])
+
+
+def station_thresholds(preds: pd.DataFrame, target: float = TARGET_RECALL,
+                       min_alerts: int = MIN_GROUP_ALERTS) -> dict[str, float]:
+    """Canlı sistem için istasyon başına eşik: tüm tahminlerden, yetersiz örnekte genel eşik."""
+    fallback = threshold_for_recall(preds["y_true"], preds["y_pred"], target)
+    out = {}
+    for st, g in preds.groupby("station", observed=True):
+        enough = exceeds(g["y_true"]).sum() >= min_alerts
+        out[str(st)] = (threshold_for_recall(g["y_true"], g["y_pred"], target)
+                        if enough else fallback)
+    return out
+
+
+def load_thresholds(path=THRESHOLD_PATH) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def decision_threshold(station: str, config: dict | None = None) -> float:
+    """Bir istasyon için uyarı karar eşiği; tanımsız istasyonda genel eşik."""
+    config = config or load_thresholds()
+    return float(config["stations"].get(station, config["default_threshold_ugm3"]))
 
 
 def main() -> None:
@@ -253,8 +279,10 @@ def main() -> None:
 
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     THRESHOLD_PATH.write_text(json.dumps({
-        "model": MODEL, "horizon_h": 24, "decision_threshold_ugm3": final,
+        "model": MODEL, "horizon_h": 24, "strategy": "station",
+        "default_threshold_ugm3": final, "stations": station_thresholds(preds),
         "official_threshold_ugm3": OFFICIAL, "target_recall": TARGET_RECALL,
+        "min_group_alerts": MIN_GROUP_ALERTS,
         "calibrated_on": f"{preds['time'].min():%Y-%m-%d} → {preds['time'].max():%Y-%m-%d}",
         "created": date.today().isoformat()}, ensure_ascii=False, indent=2), encoding="utf-8")
     REPORT_PATH.write_text(build_report(preds, thresholds, final, len(eval_folds)) + "\n",

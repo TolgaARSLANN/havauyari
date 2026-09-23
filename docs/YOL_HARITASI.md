@@ -321,7 +321,9 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
 
     Mevsime göre eşik kazanç getirmedi. İstasyona göre eşik en kötü istasyonun recall'ünü
     0,39 → 0,71'e çıkarıyor ve yaz yanlış alarmını azaltıyor; bedeli genel precision'da −0,024.
-    Canlı eşik dosyası şimdilik tek eşikte; istasyon bazlı eşiğe geçiş kararı bekleniyor.
+    **Karar: istasyon bazlı eşiğe geçildi.** `models/alert_threshold.json` artık istasyon başına
+    eşik (18,5–32,0) ve genel yedek eşik (28,5) içeriyor; okuma:
+    `alerts.threshold.decision_threshold`.
 - [ ] **4.5 Tahmin aralığı**: quantile LightGBM (%10–%90 bandı)
 - [ ] **4.6 SHAP**: global önem + tek tahmin açıklaması
 - [ ] **4.7 Final model kaydı**: `models/` altında sürümlü model + metrik JSON

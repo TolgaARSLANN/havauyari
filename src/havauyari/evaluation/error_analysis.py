@@ -257,10 +257,39 @@ def build_report(p: pd.DataFrame) -> str:
     ])
 
 
+CURVES_PATH = ROOT / "reports" / "perf_curves.json"
+
+
+def export_curves(w: pd.DataFrame) -> dict:
+    """Panonun tema uyumlu grafikleri için özet eğriler (ham tahminler olmadan çizilebilsin)."""
+    truth = exceeds(w["y_true"])
+    thr = np.round(np.arange(10, 60.01, 1.0), 1)
+    pr = {}
+    for m in (MAIN, OPT):
+        rec = [float(((w[m] >= t) & truth).sum() / truth.sum()) for t in thr]
+        prec = [float(((w[m] >= t) & truth).sum() / max((w[m] >= t).sum(), 1)) for t in thr]
+        pr[m] = {"threshold": thr.tolist(), "recall": rec, "precision": prec}
+    points = {}
+    for m in ("persistence", "cams_raw", "cams_scaled"):
+        p = exceeds(w[m])
+        points[m] = {"recall": float((p & truth).sum() / truth.sum()),
+                     "precision": float((p & truth).sum() / p.sum())}
+    bins = np.arange(0, 125, 5)
+    b = pd.cut(w["y_true"], bins)
+    calib = {"true_mid": ((bins[:-1] + bins[1:]) / 2).tolist()}
+    for m in (MAIN, "persistence", "cams_raw"):
+        calib[m] = [None if pd.isna(v) else round(float(v), 2)
+                    for v in w.groupby(b, observed=False)[m].mean()]
+    return {"pr": pr, "points": points, "calibration": calib}
+
+
 def main() -> None:
+    import json
+
     p = load()
     REPORT_PATH.write_text(build_report(p) + "\n", encoding="utf-8")
-    print(f"[ok] {REPORT_PATH}")
+    CURVES_PATH.write_text(json.dumps(export_curves(wide(p))), encoding="utf-8")
+    print(f"[ok] {REPORT_PATH}, {CURVES_PATH}")
 
 
 if __name__ == "__main__":

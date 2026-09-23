@@ -1,0 +1,34 @@
+{
+  "family_share_pct": {
+    "istasyon PM2.5 geçmişi": 35.72,
+    "hava tahmini (o gün yayımlanan)": 30.01,
+    "meteoroloji gözlemi (ERA5)": 15.09,
+    "takvim ve hedef zamanı": 7.53,
+    "CAMS diğer kirleticiler": 7.49,
+    "istasyon / şehir kimliği": 2.43,
+    "istasyon PM10": 1.13,
+    "CAMS PM2.5 ve oranı": 0.6
+  },
+  "top_features": {
+    "station_pm25": 3.041,
+    "fc_win_wind_mean": 2.729,
+    "station_pm25_rollmean168": 1.411,
+    "surface_pressure": 1.397,
+    "station_pm25_lag1": 0.978,
+    "fc_win_precip_sum": 0.904,
+    "station_pm25_tgt_day_ago": 0.875,
+    "station_code": 0.621,
+    "station_pm25_lag24": 0.617,
+    "fc_tgt_wind_speed": 0.598,
+    "station_pm25_lag168": 0.523,
+    "fc_tgt_humidity": 0.462,
+    "fc_tgt_wind_v": 0.443,
+    "fc_tgt_temp_change": 0.439,
+    "hour_cos": 0.431,
+    "heating_degree_rollmean24": 0.411,
+    "fc_win_temp_range": 0.363,
+    "station_pm25_lag2": 0.345,
+    "fc_win_calm_hours": 0.327,
+    "dayofweek": 0.316
+  }
+}

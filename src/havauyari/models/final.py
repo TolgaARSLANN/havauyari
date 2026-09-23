@@ -36,6 +36,7 @@ MODEL_PATH = MODELS_DIR / f"lgbm_station_h{HORIZON}.txt"
 CARD_PATH = MODELS_DIR / "model_card.json"
 REPORT_PATH = ROOT / "reports" / f"aciklanabilirlik_h{HORIZON}.md"
 FIG_DIR = ROOT / "reports" / "figures"
+FAMILIES_PATH = ROOT / "reports" / "feature_families.json"
 EXPLAIN_FROM = "2025-09-23"   # açıklamalar son 12 ayın (test dönemi) satırları üzerinde
 
 
@@ -153,6 +154,10 @@ def build_report(booster: lgb.Booster, feats: pd.DataFrame, cols: list[str]) -> 
     f3 = _local_plot(expl, f"Bursa, {t:%Y-%m-%d %H:%M} için 24 s sonrası tahmini",
                      "4_shap_ornek.png")
 
+    FAMILIES_PATH.write_text(json.dumps(
+        {"family_share_pct": family_share.round(2).to_dict(),
+         "top_features": top20.round(3).to_dict()}, ensure_ascii=False, indent=2),
+        encoding="utf-8")
     fam_view = pd.DataFrame({"toplam ort. |katkı|": family, "pay %": family_share})
     fam_view.index.name = "aile"
     return "\n".join([

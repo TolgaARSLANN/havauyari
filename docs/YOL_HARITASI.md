@@ -403,6 +403,26 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
     tahminlerin gerçekleşen ölçüme göre MAE'si (ilk bakışta Ankara-Keçiören 7,4 vs geri test 6,8).
   - Testler (`tests/test_ui.py`): bileşenler + Streamlit `AppTest` ile sahte servisle duman testi.
     Canlı veriyle tarayıcıda doğrulandı.
+- [x] **6.6 Profesyonel arayüz (tasarım sistemi)** — `ui-ux-pro-max` önerisinden uyarlandı:
+  - Stil: Minimalizm / İsviçre (ızgara, boşluk, net hiyerarşi). Nötr renkler slate; renkli vurgu
+    yalnızca EPA AQI durumlarında ve her zaman metin + ikonla (renk tek bilgi taşıyıcı değil).
+    Veri mavisi; katkı grafiğinde renk körlüğüne uygun turuncu/mavi.
+  - Tipografi: Fira Sans (metin), Fira Code (büyük sayılar), sabit genişlikli rakamlar; Türkçe
+    sayı biçimi (virgül ondalık) grafiklerde de.
+  - `ui/theme.py`: tasarım belirteçleri (açık + koyu), CSS, Lucide SVG ikonlar (emoji yok),
+    Plotly şablonu. `.streamlit/config.toml`'da `[theme.light]`/`[theme.dark]` aynı renklerle:
+    sistem tercihine göre geçiş (tek `primaryColor` Streamlit'i açık temaya kilitliyordu).
+  - Yeni bileşenler: canlılık durumlu başlık (güncelleme zamanı + "Canlı / Veri gecikmeli"),
+    gösterge kartları, istasyon kart ızgarası (tahmine göre sıralı, uyarı/risk bayrağı),
+    AQI açıklaması, %80 aralık + resmî eşik çubuğu, uyarı/sağlık bilgi kutuları.
+  - Model performansı PNG'ler yerine tema uyumlu Plotly grafikleri
+    (`reports/perf_curves.json`, `reports/feature_families.json`); PR eğrisinde canlı ayarın yeri.
+  - Erişilebilirlik: metin/yüzey kontrastı her iki temada ≥ 4,5:1 ve AQI rozet metni ≥ 4,5:1
+    **testle doğrulanıyor** (#FF0000 üzerinde beyaz 4,0 → siyah metne geçildi); görünür odak
+    halkası; `prefers-reduced-motion`; ikonlar `aria-hidden`, aralık çubuğu `role="img"` +
+    açıklama; tablo görünümü alternatif olarak korunuyor.
+  - Duyarlılık: 1024 px ve 375 px'te sayfa düzeyinde yatay taşma yok (ölçüldü); başlık yükleme
+    sırasında hemen görünüyor.
 
 ## FAZ 7: MLOps ve Otomasyon · ~3-4 gün
 

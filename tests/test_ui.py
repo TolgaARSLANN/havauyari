@@ -50,11 +50,43 @@ def test_tr_num():
 def test_figures_build(forecast):
     fig = forecast_figure(forecast)
     names = {t.name for t in fig.data}
-    assert {"ölçüm", "önümüzdeki 24 saat tahmini", "%80 aralık"} <= names
+    assert {"ölçüm", "tahmin", "önceki tahminler", "%80 aralık"} <= names
     assert len(explanation_figure(forecast["explanation"]).data[0].x) == 5
     m = map_figure([{"name": "a", "lat": 40, "lon": 29, "pm25": 20, "category": "Orta",
                      "is_alert": False, "risk": True}])
-    assert m.data[0].marker.color[0] == CATEGORY_COLORS["Orta"]
+    stations = next(tr for tr in m.data if tr.name == "istasyonlar")
+    assert stations.marker.color[0] == CATEGORY_COLORS["Orta"]
+
+
+def test_theme_tokens_and_contrast():
+    """Metin/yüzey kontrastı her iki temada ≥ 4.5:1 (WCAG AA)."""
+    from havauyari.ui.theme import DARK, LIGHT
+
+    def lum(hex_color):
+        rgb = [int(hex_color[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        lin = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in rgb]
+        return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+    def contrast(a, b):
+        hi, lo = sorted([lum(a), lum(b)], reverse=True)
+        return (hi + 0.05) / (lo + 0.05)
+
+    for t in (LIGHT, DARK):
+        for fg in (t.text, t.muted):
+            for bg in (t.bg, t.surface, t.surface_alt):
+                assert contrast(fg, bg) >= 4.5, (t.name, fg, bg)
+    for cat, bg in CATEGORY_COLORS.items():                 # rozet metni
+        from havauyari.ui.components import CATEGORY_TEXT_COLORS
+        assert contrast(CATEGORY_TEXT_COLORS[cat], bg) >= 4.5, cat
+
+
+def test_html_fragments_escape_and_label():
+    from havauyari.ui.components import category_chip, flags_html, range_html
+
+    assert "Uyarı yok" in flags_html(False, False) and "Risk" in flags_html(False, True)
+    assert "&lt;" in category_chip("<x>")                  # kullanıcı metni kaçışlanır
+    r = range_html(20, 10, 40, 30)
+    assert 'role="img"' in r and "eşik 35,5" in r
 
 
 def test_streamlit_app_renders_with_fake_service(service, monkeypatch):
@@ -66,7 +98,10 @@ def test_streamlit_app_renders_with_fake_service(service, monkeypatch):
     at = AppTest.from_file(str(APP), default_timeout=60)
     at.run()
     assert not at.exception, at.exception
-    assert [t.label for t in at.tabs] == ["Genel bakış", "İstasyon", "Model performansı",
-                                          "Hakkında"]
-    assert any("Uyarı verilen istasyon" in m.label for m in at.metric)
+    assert [t.label for t in at.tabs] == ["Genel bakış", "İstasyon detayı",
+                                          "Model performansı", "Hakkında"]
+    body = " ".join(m.value for m in at.markdown)
+    for text in ("HavaUyarı", "Hedef zaman", "Uyarı riski", "hu-station", "için tahmin",
+                 "Bu tahmin neden böyle?"):
+        assert text in body, text
     assert at.selectbox[0].options                      # istasyon seçimi dolu

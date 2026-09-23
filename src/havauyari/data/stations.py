@@ -13,7 +13,7 @@ Temizlik kuralları (gerekçeler: docs/YOL_HARITASI.md, Faz 3.7):
 5. PM2.5 > PM10 durumları düzeltilmez: iki farklı cihazın ölçümü, kalite raporunda sayılır.
 
 Zaman damgaları: SİM yerel saat (Europe/Istanbul) kullanır. Ozon zirvesi testi (Ankara
-istasyonunda 13:00, CAMS'ta 13:00) saatlerin doğru olduğunu gösterdi; istasyon ile CAMS arasındaki
+istasyonunda 13.00, CAMS'ta 13.00) saatlerin doğru olduğunu gösterdi; istasyon ile CAMS arasındaki
 1–7 saatlik kayma CAMS'ın zamanlamasından/yerel süreçlerden kaynaklanıyor ve model tarafından
 (CAMS'ın hedef öncesi saatleri özellik olarak verilerek) öğrenilecek.
 """
@@ -215,8 +215,8 @@ def build_report(data: pd.DataFrame, cleaning: pd.DataFrame) -> str:
         "## Saat hizası kontrolü",
         "",
         "Ozon fotokimyasal olarak öğleden sonra zirve yapar. Temmuz 2025 medyan profilinde "
-        "Ankara-Keçiören istasyonunun ozon zirvesi 13:00, CAMS'ınki 13:00; ERA5 sıcaklık zirvesi "
-        "13–16 arası. SİM zaman damgaları yerel saattir ve kaydırma gerekmez. İstasyon ozon "
+        "Ankara-Keçiören istasyonunun ozon zirvesi 13.00, CAMS'ınki 13.00; ERA5 sıcaklık zirvesi "
+        "13.00–16.00 arası. SİM zaman damgaları yerel saattir ve kaydırma gerekmez. İstasyon ozon "
         "zirvesinin İstanbul/Bursa/Kocaeli'de CAMS'tan 2–4 saat geç olması, PM2.5'teki kaymayla "
         "aynı yönde: CAMS olayları sistematik olarak erken gösteriyor.",
         "",

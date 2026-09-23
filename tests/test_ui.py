@@ -29,7 +29,7 @@ def test_explanation_sentence_names_strongest_factors():
         {"feature": "hour_cos", "contribution": 0.5}]}
     s = explanation_sentence(e)
     assert "istasyonun şu anki ölçümü" in s and "+4,1" in s
-    assert "tahmini ortalama rüzgârı" in s and "−3,1" in s
+    assert "tahminî ortalama rüzgârı" in s and "−3,1" in s
     assert explanation_sentence({"top_features": []}).startswith("Belirgin")
     assert feature_label("bilinmeyen_ozellik") == "bilinmeyen_ozellik"
 
@@ -47,10 +47,31 @@ def test_tr_num():
     assert tr_num(-5, 0) == "−5"
 
 
+def test_turkish_date_and_percent_formats():
+    """TDK: saat ile dakika arasında nokta; ay adı yazıyla; yüzde işareti sayıdan önce."""
+    from havauyari.ui.components import tr_datetime, tr_pct, tr_short
+
+    assert tr_datetime("2026-09-24 14:00") == "24 Eylül 2026, 14.00"
+    assert tr_datetime("2026-01-05 09:30", year=False) == "5 Ocak, 09.30"
+    assert tr_short("2026-09-24 14:00") == "24.09, 14.00"
+    assert tr_pct(0.824) == "%82" and tr_pct(0.829, 1) == "%82,9"
+
+
+def test_pr_figure_uses_turkish_percent_ticks():
+    from havauyari.ui.components import pr_figure
+
+    curves = {"pr": {"lgbm_gercekci": {"threshold": [30.0], "recall": [0.8],
+                                       "precision": [0.6]}},
+              "points": {"persistence": {"recall": 0.5, "precision": 0.5}}}
+    fig = pr_figure(curves, {"recall": 0.8, "precision": 0.55})
+    assert list(fig.layout.xaxis.ticktext)[4] == "%80"
+    assert fig.data[0].customdata[0][1] == "%80"
+
+
 def test_figures_build(forecast):
     fig = forecast_figure(forecast)
     names = {t.name for t in fig.data}
-    assert {"ölçüm", "tahmin", "önceki tahminler", "%80 aralık"} <= names
+    assert {"ölçüm", "tahmin", "önceki tahminler", "%80'lik aralık"} <= names
     assert len(explanation_figure(forecast["explanation"]).data[0].x) == 5
     m = map_figure([{"name": "a", "lat": 40, "lon": 29, "pm25": 20, "category": "Orta",
                      "is_alert": False, "risk": True}])
@@ -93,7 +114,8 @@ def test_css_keeps_icon_font():
 def test_html_fragments_escape_and_label():
     from havauyari.ui.components import category_chip, flags_html, range_html
 
-    assert "Uyarı yok" in flags_html(False, False) and "Risk" in flags_html(False, True)
+    assert "Uyarı yok" in flags_html(False, False)
+    assert "Uyarı riski" in flags_html(False, True)
     assert "&lt;" in category_chip("<x>")                  # kullanıcı metni kaçışlanır
     r = range_html(20, 10, 40, 30)
     assert 'role="img"' in r and "eşik 35,5" in r
@@ -113,7 +135,7 @@ def test_streamlit_app_renders_with_fake_service(service, monkeypatch):
                                 "Hakkında"], labels, strict=True):
         assert label.endswith(expected), label
     body = " ".join(m.value for m in at.markdown)
-    for text in ("HavaUyarı", "Hedef zaman", "Uyarı riski", "hu-station", "için tahmin",
-                 "Bu tahmin neden böyle?"):
+    for text in ("HavaUyarı", "Tahmin edilen saat", "Uyarı riski", "hu-station", "için tahmin",
+                 "Bu tahmin neden böyle?", 'lang="tr"'):
         assert text in body, text
     assert at.selectbox[0].options                      # istasyon seçimi dolu

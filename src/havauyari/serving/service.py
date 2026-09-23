@@ -1,6 +1,6 @@
 """Tahmin akışı (Faz 5.1): canlı veri -> eğitimdeki aynı temizlik/özellikler -> tahmin.
 
-Bir istasyon için çıktı: 24 saat sonrası PM2.5 tahmini, %80 aralık, AQI kategorisi, istasyon
+Bir istasyon için çıktı: 24 saat sonrası PM2.5 tahmini, %80'lik aralık, AQI kategorisi, istasyon
 eşiğine göre uyarı kararı, "uyarı riski" bayrağı ve tahminin açıklaması (özellik katkıları).
 """
 
@@ -121,7 +121,8 @@ class ForecastService:
         feats = build_station_features(frame, HORIZON)
         if now not in feats.index or pd.isna(feats.at[now, STATION_TARGET]):
             raise DataUnavailable(
-                f"{station['name']}: son {FEATURE_FFILL_HOURS} saatte PM2.5 ölçümü yok")
+                f"{station['name']}: son {FEATURE_FFILL_HOURS} saatte PM2.5 ölçümü yapılmamış; "
+                "bu istasyon için şu anda tahmin üretilemiyor.")
 
         X = self._features(station, feats.loc[[now]])
         pred = max(float(self.a.booster.predict(X)[0]), 0.0)
@@ -169,7 +170,7 @@ class ForecastService:
 
     def _trajectory(self, station: dict, raw: pd.DataFrame, feats: pd.DataFrame,
                     now: datetime, hours_back: int = 72) -> list[dict]:
-        """Son `hours_back + 24` saatte her saat verilmiş 24 s sonrası tahminler.
+        """Son `hours_back + 24` saatte her saat verilmiş 24 saatlik tahminler.
 
         t anında verilen tahmin t+24'ü hedefler. Son 24 saatte verilenler önümüzdeki 24 saati
         kapsar (ileriye dönük eğri); daha öncekiler, gerçekleşen ölçümle karşılaştırılabilir

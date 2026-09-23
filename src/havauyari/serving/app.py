@@ -7,8 +7,9 @@
 Uç noktalar:
     GET /health                 servis ve model durumu
     GET /stations               istasyonlar ve uyarı karar eşikleri
-    GET /forecast/{station}     24 saat sonrası tahmin, %80 aralık, uyarı, açıklama
-    GET /alerts                 tüm istasyonlar (?only_alerts=true: yalnızca uyarı/risk olanlar)
+    GET /forecast/{station}     24 saat sonrası için tahmin, %80'lik aralık, uyarı, açıklama
+    GET /alerts                 tüm istasyonlar (?only_alerts=true: yalnızca uyarı ya da uyarı
+                                riski olanlar)
 """
 
 from __future__ import annotations
@@ -20,9 +21,10 @@ from havauyari.serving.schemas import Forecast, Health, Station, StationError
 from havauyari.serving.service import DataUnavailable, ForecastService
 
 DESCRIPTION = (
-    "Türkiye'deki hava kalitesi istasyonlarında **24 saat sonra ölçülecek PM2.5** tahmini. "
-    "CAMS atmosfer modeli, o gün yayımlanan hava tahmini ve istasyon geçmişiyle eğitilmiş "
-    "LightGBM modeli. Tahminler bilgilendirme amaçlıdır; resmî uyarıların yerine geçmez."
+    "Türkiye'deki hava kalitesi istasyonlarında **24 saat sonra ölçülecek PM2.5** değerinin "
+    "tahmini. Tahminler; CAMS atmosfer modeli verileri, o gün yayımlanan hava tahmini ve "
+    "istasyonun geçmiş ölçümleriyle eğitilmiş bir LightGBM modeliyle üretilir. Yalnızca "
+    "bilgilendirme amaçlıdır; resmî uyarıların yerine geçmez."
 )
 
 
@@ -65,13 +67,14 @@ def create_app(service: ForecastService | None = None) -> FastAPI:
         try:
             return svc.forecast(station)
         except KeyError:
-            raise HTTPException(404, detail=f"Bilinmeyen istasyon: {station}. "
-                                            f"Geçerli: {sorted(svc.a.stations)}") from None
+            raise HTTPException(404, detail=f"Bilinmeyen istasyon: {station}. Geçerli "
+                                            f"istasyonlar: {sorted(svc.a.stations)}") from None
         except DataUnavailable as e:
             raise HTTPException(503, detail=str(e)) from None
 
     @app.get("/alerts", response_model=list[Forecast | StationError], tags=["tahmin"])
-    def alerts(only_alerts: bool = Query(False, description="Yalnızca uyarı/risk olanlar")):
+    def alerts(only_alerts: bool = Query(False, description="Yalnızca uyarı ya da uyarı "
+                                                           "riski olan istasyonlar")):
         return get_service().alerts(only_alerts=only_alerts)
 
     return app

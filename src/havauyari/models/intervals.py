@@ -144,7 +144,7 @@ def build_report(q: pd.DataFrame, final: pd.DataFrame) -> str:
         "\"uyarı riski var\" bilgisi olarak gösterilebilir.",
         "",
         "Örnek: tahmin "
-        f"{example['y_pred']:.1f} µg/m³ → %80 aralık {example['lo']:.1f}–{example['hi']:.1f} "
+        f"{example['y_pred']:.1f} µg/m³ → %80'lik aralık {example['lo']:.1f}–{example['hi']:.1f} "
         f"(gerçekleşen {example['y_true']:.1f}).",
         "",
         "## Canlı sistem tablosu",

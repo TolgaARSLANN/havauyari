@@ -8,28 +8,30 @@ from pydantic import BaseModel, Field
 
 
 class Interval(BaseModel):
-    low: float = Field(description="%80 aralığın alt sınırı (µg/m³)")
-    high: float = Field(description="%80 aralığın üst sınırı (µg/m³)")
+    low: float = Field(description="%80'lik aralığın alt sınırı (µg/m³)")
+    high: float = Field(description="%80'lik aralığın üst sınırı (µg/m³)")
 
 
 class Alert(BaseModel):
-    is_alert: bool = Field(description="Tahmin ≥ istasyonun karar eşiği")
-    decision_threshold: float = Field(description="İstasyon karar eşiği (µg/m³), Faz 4.4")
+    is_alert: bool = Field(description="Tahmin, istasyonun karar eşiğine eşit ya da ondan büyük")
+    decision_threshold: float = Field(description="İstasyonun uyarı karar eşiği (µg/m³)")
     official_threshold: float = Field(description="Resmî uyarı eşiği: 35,5 µg/m³")
-    risk: bool = Field(description="%80 aralığın üst sınırı ≥ 35,5 (uyarı riski)")
+    risk: bool = Field(description="Uyarı riski: %80'lik aralığın üst sınırı 35,5 µg/m³'e "
+                                   "eşit ya da ondan büyük")
 
 
 class Contribution(BaseModel):
     feature: str
     family: str
     value: float | None
-    contribution: float = Field(description="Tahmine katkı (µg/m³); + artırır, − azaltır")
+    contribution: float = Field(description="Tahmine katkı (µg/m³); artı değer tahmini "
+                                            "yükseltir, eksi değer düşürür")
 
 
 class Explanation(BaseModel):
-    base_value: float = Field(description="Modelin ortalama tahmini (taban)")
+    base_value: float = Field(description="Modelin ortalama tahmini (taban değer)")
     top_features: list[Contribution]
-    other_features: float = Field(description="Kalan özelliklerin toplam katkısı")
+    other_features: float = Field(description="Diğer özelliklerin toplam katkısı")
 
 
 class Measurement(BaseModel):
@@ -49,7 +51,7 @@ class TrajectoryPoint(BaseModel):
     pm25: float
     low: float
     high: float
-    actual: float | None = Field(description="Gerçekleşen ölçüm (henüz yoksa null)")
+    actual: float | None = Field(description="Gerçekleşen ölçüm (henüz ölçülmediyse null)")
 
 
 class HistoryPoint(BaseModel):
@@ -61,9 +63,10 @@ class Forecast(BaseModel):
     station: str
     station_name: str
     city: str
-    issued_at: datetime = Field(description="Tahminin verildiği saat (yerel)")
-    target_time: datetime = Field(description="Tahmin edilen saat (yerel), issued_at + 24 s")
-    pm25: float = Field(description="24 saat sonrası PM2.5 tahmini (µg/m³)")
+    issued_at: datetime = Field(description="Tahminin verildiği saat (yerel saat)")
+    target_time: datetime = Field(description="Tahmin edilen saat (yerel saat): "
+                                              "issued_at + 24 saat")
+    pm25: float = Field(description="24 saat sonrası için PM2.5 tahmini (µg/m³)")
     interval_80: Interval
     aqi: int
     category: str
@@ -72,7 +75,7 @@ class Forecast(BaseModel):
     latest_measurement: Measurement
     model: ModelInfo
     trajectory: list[TrajectoryPoint] = Field(
-        description="Son 96 saatte her saat verilmiş 24 s sonrası tahminler; son 24'ü "
+        description="Son 96 saatte her saat verilmiş 24 saatlik tahminler; son 24 tahmin, "
                     "önümüzdeki 24 saati kapsar")
     history: list[HistoryPoint] = Field(description="Son 72 saatin istasyon ölçümleri")
 

@@ -68,7 +68,7 @@ def test_stale_station_data_503(models_dir):
     svc = ForecastService(load_artifacts(models_dir), FakeProvider(gap_for={"s1"}),
                           clock=lambda: NOW)
     r = TestClient(create_app(svc)).get("/forecast/s1")
-    assert r.status_code == 503 and "ölçümü yok" in r.json()["detail"]
+    assert r.status_code == 503 and "ölçümü yapılmamış" in r.json()["detail"]
 
 
 def test_same_hour_is_cached_new_hour_refetches(models_dir):

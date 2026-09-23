@@ -1,0 +1,9 @@
+[server]
+# Tarayıcıyı kendisi açmaya çalışmaz ve ilk çalıştırmadaki e-posta sorusunu atlar
+headless = true
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+primaryColor = "#1f77b4"

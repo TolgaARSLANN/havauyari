@@ -263,7 +263,24 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
 
 - [ ] **4.1 Deney takibi**: MLflow ile tüm denemelerin kaydı
 - [ ] **4.2 Hiperparametre araması**: Optuna (walk-forward skoru üzerinden)
-- [ ] **4.3 Hata analizi**: şehir / mevsim / saat / ufuk bazında hata, en kötü 10 dönem incelemesi
+- [x] **4.3 Hata analizi**: şehir / mevsim / saat / ufuk bazında hata, en kötü 10 dönem incelemesi
+  - İstasyon hedefli ana model (`lgbm_gercekci`) üzerinde yapıldı:
+    [`reports/hata_analizi_istasyon_h24.md`](../reports/hata_analizi_istasyon_h24.md)
+    (`python -m havauyari.evaluation.error_analysis`).
+  - **Zirveler bastırılıyor:** gerçek ≥ 55,5 µg/m³ saatlerde ortalama sapma −22,9 (35,5–55,5
+    aralığında −5,7). Kalibrasyon grafiğinde tahmin ~60'ta doyuyor. Düşük değerlerde (< 10)
+    +3,6 fazla tahmin. → Log hedef / quantile kaybı denenecek (4.2, 4.5).
+  - **Yeni başlayan uyarılar (erken uyarının asıl değeri):** model %34'ünü yakalıyor;
+    persistence tanım gereği %0, CAMS %26. Süren uyarılarda model %86.
+  - **Kaçırılan uyarıların çoğu eşiğe yakın:** medyan tahmin 28,7; %70'inde tahmin ≥ 25.
+    Tanımlayıcı eşik tablosu: karar eşiği 30'da recall 0,80 / precision 0,60 (35,5'te
+    0,66 / 0,73). → Eşik ayarı büyük kazanç vaat ediyor (4.4); seçim test dönemi görülmeden
+    yapılmalı.
+  - **Hata kışın ve kirli istasyonlarda yoğun:** İzmir-Konak kış MAE 19,1, Bursa 12–13.
+    En kötü 10 günün 8'i İzmir-Konak'ta (Aralık 2025, gerçek ort. 100+ µg/m³). Bursa'da
+    14 Ocak 2026 epizodu hiç öngörülememiş (gerçek ort. 70–86, tahmin ~20): ani başlayan
+    olaylar hâlâ zayıf nokta.
+  - Hedef saate göre hata dengeli (MAE 5,7–7,5), belirgin bir saat sorunu yok.
 - [ ] **4.4 Uyarı eşiği ayarı**: kaçırılan alarmı azaltmak için eşik kaydırma
   - Bitti sayılır: "Sağlıksız" seviyesinde recall ≥ 0.80
 - [ ] **4.5 Tahmin aralığı**: quantile LightGBM (%10–%90 bandı)

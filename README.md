@@ -121,9 +121,10 @@ Ayrıntılı alt fazlar ve alınan kararlar: [docs/YOL_HARITASI.md](docs/YOL_HAR
 - [x] Özellik mühendisliği (meteoroloji, tatiller, diğer kirleticiler)
 - [x] Gerçek istasyon ölçümlerine geçiş (SİM) ve hava tahmini özellikleri
 - [x] Modelleme ve geri test: ham CAMS'a göre MAE %47,7 daha düşük
-- [x] Hata analizi, istasyon bazlı uyarı eşiği, tahmin aralıkları, açıklanabilirlik, final model
-- [ ] Optuna, MLflow, hata analizi, SHAP, tahmin aralıkları
-- [ ] FastAPI (`/forecast/{city}`, `/alerts`)
+- [x] Hata analizi, istasyon bazlı uyarı eşiği, tahmin aralıkları, açıklanabilirlik (SHAP), final model
+- [x] Deney takibi: MLflow yerine hafif kayıt (`reports/deney_kaydi.csv` + `models/model_card.json`)
+- [ ] Optuna ile hiperparametre araması (isteğe bağlı; zirve deneyi sınırın parametrede değil bilgide olduğunu gösterdi)
+- [ ] FastAPI (`/forecast/{station}`, `/alerts`)
 - [ ] Streamlit panosu + Türkiye haritası
 - [ ] Docker + GitHub Actions ile günlük otomatik tahmin
 - [ ] Hugging Face Spaces'e deploy

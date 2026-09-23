@@ -58,6 +58,26 @@ def test_walk_forward_requires_history():
         walk_forward_thresholds(_preds(), [0])
 
 
+def test_group_thresholds_use_own_history_and_fallback():
+    from havauyari.alerts.threshold import walk_forward_group_thresholds
+
+    rows = []
+    for k in range(3):
+        for st, scale in (("a", 1.0), ("b", 0.5)):   # "b" istasyonu sistematik düşük tahmin
+            y = np.full(100, 50.0)
+            rows.append(pd.DataFrame({"fold": k, "station": st, "y_true": y,
+                                      "y_pred": y * scale + np.linspace(-5, 5, 100)}))
+    p = pd.concat(rows, ignore_index=True)
+    thr = walk_forward_group_thresholds(p, [2], "station", min_alerts=50)
+    a = thr[(p["fold"] == 2) & (p["station"] == "a")].iloc[0]
+    b = thr[(p["fold"] == 2) & (p["station"] == "b")].iloc[0]
+    assert b < a                                     # düşük tahmin eden istasyona düşük eşik
+    assert thr[p["fold"] < 2].isna().all()           # yalnızca değerlendirme pencereleri
+    # Yeterli uyarı yoksa genel eşiğe düşer
+    fb = walk_forward_group_thresholds(p, [2], "station", min_alerts=10_000)
+    assert fb[p["fold"] == 2].nunique() == 1
+
+
 def test_apply_and_binary_metrics():
     p = _preds()
     q = apply_thresholds(p, {2: 25.0, 3: 30.0})

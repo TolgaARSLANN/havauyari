@@ -46,6 +46,16 @@ _Oluşturulma: 2026-09-23 · Üreten: `python -m havauyari.alerts.threshold` · 
 | izmir_konak | 4478 | 0.790 | 0.934 | 0.649 |
 | kocaeli | 1070 | 0.502 | 0.735 | 0.433 |
 
+## Eşik stratejileri (istasyon / mevsim)
+
+Aynı walk-forward kural, grup başına uygulanır; geçmişte grup için 50'den az uyarı varsa genel eşik kullanılır.
+
+| strateji | recall | precision | F1 | yaz precision | en düşük istasyon recall | uyarı saati / ist.-hafta |
+|---|---|---|---|---|---|---|
+| tek eşik | 0.824 | 0.572 | 0.676 | 0.255 | 0.391 | 34.404 |
+| mevsime göre | 0.825 | 0.555 | 0.663 | 0.259 | 0.385 | 35.525 |
+| istasyona göre | 0.798 | 0.548 | 0.650 | 0.320 | 0.714 | 34.753 |
+
 ## Canlı sistem eşiği
 
 Tüm 24 pencerenin tahminlerinden seçilen eşik: **28.5 µg/m³** (`models/alert_threshold.json`).

@@ -82,6 +82,62 @@ def walk_forward_thresholds(preds: pd.DataFrame, eval_folds: list[int],
 
 
 PROBABILITY_GRID = np.round(np.arange(0.01, 1.0, 0.01), 2)
+MIN_GROUP_ALERTS = 50
+
+
+def walk_forward_group_thresholds(preds: pd.DataFrame, eval_folds: list[int], group_col: str,
+                                  target: float = TARGET_RECALL, grid: np.ndarray = GRID,
+                                  min_alerts: int = MIN_GROUP_ALERTS) -> pd.Series:
+    """Grup (istasyon / mevsim) başına walk-forward eşik; satır bazında eşik serisi döner.
+
+    Her pencere k ve grup g için eşik yalnızca k'dan önceki pencerelerde g'ye ait tahminlerden
+    seçilir. Geçmişte g için `min_alerts`'ten az gerçek uyarı varsa genel eşik kullanılır.
+    """
+    out = pd.Series(np.nan, index=preds.index)
+    for k in eval_folds:
+        past = preds[preds["fold"] < k]
+        if past.empty:
+            raise ValueError(f"Pencere {k} için geçmiş tahmin yok")
+        fallback = threshold_for_recall(past["y_true"], past["y_pred"], target, grid)
+        current = preds["fold"] == k
+        for g in preds.loc[current, group_col].unique():
+            pg = past[past[group_col] == g]
+            thr = (threshold_for_recall(pg["y_true"], pg["y_pred"], target, grid)
+                   if exceeds(pg["y_true"]).sum() >= min_alerts else fallback)
+            out[current & (preds[group_col] == g)] = thr
+    return out
+
+
+def compare_strategies(preds: pd.DataFrame, eval_folds: list[int]) -> pd.DataFrame:
+    """Tek eşik / mevsime göre / istasyona göre eşik stratejilerini son pencerelerde kıyaslar."""
+    from havauyari.evaluation.backtest import SEASON_OF_MONTH
+
+    p = preds.assign(season=preds["target_time"].dt.month.map(SEASON_OF_MONTH))
+    last = p["fold"].isin(eval_folds)
+    truth = exceeds(p.loc[last, "y_true"])
+    glob = p["fold"].map(walk_forward_thresholds(p, eval_folds))
+    strategies = {
+        "tek eşik": glob,
+        "mevsime göre": walk_forward_group_thresholds(p, eval_folds, "season"),
+        "istasyona göre": walk_forward_group_thresholds(p, eval_folds, "station"),
+    }
+    weeks = (p.loc[last, "time"].max() - p.loc[last, "time"].min()).days / 7
+    rows = {}
+    for name, thr in strategies.items():
+        alert = (p.loc[last, "y_pred"] >= thr[last]).to_numpy()
+        m = binary_metrics(truth, alert)
+        q = p.loc[last].assign(alert=alert, truth=truth)
+        summer = q[q["season"] == "Yaz"]
+        st_recall = q[q["truth"]].groupby("station", observed=True)["alert"].mean()
+        rows[name] = {
+            "recall": m["recall"], "precision": m["precision"], "F1": m["f1"],
+            "yaz precision": binary_metrics(summer["truth"], summer["alert"])["precision"],
+            "en düşük istasyon recall": st_recall.min(),
+            "uyarı saati / ist.-hafta": m["uyarı_saati"] / (weeks * q["station"].nunique()),
+        }
+    out = pd.DataFrame(rows).T
+    out.index.name = "strateji"
+    return out
 
 
 def apply_thresholds(preds: pd.DataFrame, thresholds: dict[int, float]) -> pd.DataFrame:
@@ -167,6 +223,13 @@ def build_report(preds: pd.DataFrame, thresholds: dict[int, float], final: float
         "## İstasyon bazında",
         "",
         to_markdown(per_station, ".3f"),
+        "",
+        "## Eşik stratejileri (istasyon / mevsim)",
+        "",
+        "Aynı walk-forward kural, grup başına uygulanır; geçmişte grup için "
+        f"{MIN_GROUP_ALERTS}'den az uyarı varsa genel eşik kullanılır.",
+        "",
+        to_markdown(compare_strategies(preds, sorted(thresholds)), ".3f"),
         "",
         "## Canlı sistem eşiği",
         "",

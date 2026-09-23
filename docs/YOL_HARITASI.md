@@ -310,6 +310,18 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
     uyarının sık olduğu İzmir/Bursa'ya göre ayarlanıyor; İstanbul-Ümraniye 0,39,
     Ankara-Keçiören 0,48, İstanbul-Sultangazi 0,55'te kalıyor → istasyon bazlı eşik ileride
     değerlendirilebilir. Rapor: [`reports/uyari_esigi_h24.md`](../reports/uyari_esigi_h24.md)
+  - **Grup bazlı eşik denemesi** (aynı walk-forward kural, grup başına; 50'den az geçmiş uyarıda
+    genel eşik):
+
+    | Strateji | Recall | Precision | F1 | Yaz precision | En düşük istasyon recall |
+    |---|---|---|---|---|---|
+    | Tek eşik (mevcut) | 0,824 | 0,572 | 0,676 | 0,255 | 0,391 |
+    | Mevsime göre | 0,825 | 0,555 | 0,663 | 0,259 | 0,385 |
+    | **İstasyona göre** | 0,798 | 0,548 | 0,650 | **0,320** | **0,714** |
+
+    Mevsime göre eşik kazanç getirmedi. İstasyona göre eşik en kötü istasyonun recall'ünü
+    0,39 → 0,71'e çıkarıyor ve yaz yanlış alarmını azaltıyor; bedeli genel precision'da −0,024.
+    Canlı eşik dosyası şimdilik tek eşikte; istasyon bazlı eşiğe geçiş kararı bekleniyor.
 - [ ] **4.5 Tahmin aralığı**: quantile LightGBM (%10–%90 bandı)
 - [ ] **4.6 SHAP**: global önem + tek tahmin açıklaması
 - [ ] **4.7 Final model kaydı**: `models/` altında sürümlü model + metrik JSON

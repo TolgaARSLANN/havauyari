@@ -3,6 +3,7 @@ Plotly grafikleri. Görsel kararlar ui/theme.py'deki tasarım sisteminden gelir.
 
 from __future__ import annotations
 
+import math
 import random
 from functools import lru_cache
 from html import escape
@@ -720,37 +721,101 @@ def explanation_figure(explanation: dict, t: Tokens = LIGHT) -> go.Figure:
     return fig
 
 
-def map_figure(rows: list[dict], t: Tokens = LIGHT, narrow: bool = False) -> go.Figure:
-    """İstasyonlar, yarınki tahmin kategorisinin rengiyle; değer işaretin üzerinde yazılı.
-    narrow=True: telefon genişliği için daha uzak görünüm (tüm istasyonlar çerçevede)."""
-    df = pd.DataFrame(rows)
-    text = [f"<b>{escape(r['name'])}</b><br>Yarın bu saatte: {tr_num(r['pm25'], 0)} µg/m³"
-            f"<br>{escape(r['category'])}"
-            + ("<br><b>Uyarı</b>" if r["is_alert"] else "")
-            + ("<br>Uyarı riski: aralığın üst sınırı 35,5'i aşıyor"
-               if r["risk"] and not r["is_alert"] else "")
-            for r in rows]
-    ring = [t.danger if r["is_alert"] else t.warn if r["risk"] else t.text for r in rows]
+# Harita çerçevesi (Batı ve Orta Anadolu) ve işaret boyutu. Çerçeve kutuya sığdırılır, bu yüzden
+# en dar ekranda (≈ 340 px) 1° boylam ≈ 340 / 9 px olur; çakışma bu genişliğe göre çözülür.
+MAP_LON, MAP_LAT = (25.6, 34.6), (37.6, 42.3)
+MARKER_PX, NARROW_PX = 30, 340
+MIN_SEP_DEG = MARKER_PX * 1.12 / NARROW_PX * (MAP_LON[1] - MAP_LON[0])
+
+
+def _merc(lat: float) -> float:
+    return math.degrees(math.log(math.tan(math.pi / 4 + math.radians(lat) / 2)))
+
+
+def _inv_merc(y: float) -> float:
+    return math.degrees(2 * math.atan(math.exp(math.radians(y))) - math.pi / 2)
+
+
+def declutter(points: list[tuple[float, float]], min_sep: float = MIN_SEP_DEG,
+              iters: int = 300) -> list[tuple[float, float]]:
+    """Yakın istasyon işaretlerini birbirinden iter (Mercator düzleminde, derece cinsinden):
+    her çift en az `min_sep` uzaklığa gelene kadar, çakışan ikili ortak doğrultuları boyunca
+    eşit miktarda ayrılır. Girdi ve çıktı (boylam, enlem); sonuç her çizimde aynıdır."""
+    pos = [[lon, _merc(lat)] for lon, lat in points]
+    for _ in range(iters):
+        moved = False
+        for i in range(len(pos)):
+            for j in range(i + 1, len(pos)):
+                dx, dy = pos[j][0] - pos[i][0], pos[j][1] - pos[i][1]
+                d = math.hypot(dx, dy)
+                if d >= min_sep - 1e-9:
+                    continue
+                if d < 1e-9:                        # aynı nokta: sabit bir yönde ayır
+                    dx, dy, d = math.cos(i + j), math.sin(i + j), 1.0
+                push = (min_sep - d) / 2 + 1e-6
+                ux, uy = dx / d, dy / d
+                pos[i][0] -= ux * push
+                pos[i][1] -= uy * push
+                pos[j][0] += ux * push
+                pos[j][1] += uy * push
+                moved = True
+        if not moved:
+            break
+    return [(x, _inv_merc(y)) for x, y in pos]
+
+
+def map_figure(rows: list[dict], t: Tokens = LIGHT, height: int = 440) -> go.Figure:
+    """Atlas levhası: kıyı çizgisi ve enlem-boylam ızgarası, kâğıt zeminde (SVG; karo yok).
+    İşaret kategorinin pigmenti, üzerindeki değer panonun serif rakamıyla yazılır. Yakın
+    istasyonların işaretleri ayrılır ve gerçek konumlarına ince bir çizgiyle bağlanır.
+    Harita en-boy oranını korur: dar ekranda boşluk kalmaması için height küçültülür."""
+    true_pts = [(r["lon"], r["lat"]) for r in rows]
+    shown = declutter(true_pts)
+    hover = [f"<b>{escape(r['name'])}</b><br>Yarın bu saatte: {tr_num(r['pm25'], 0)} µg/m³"
+             f"<br>{escape(r['category'])}"
+             + ("<br><b>Uyarı</b>" if r["is_alert"] else "")
+             + ("<br>Uyarı riski: aralığın üst sınırı 35,5'i aşıyor"
+                if r["risk"] and not r["is_alert"] else "")
+             for r in rows]
     fig = go.Figure()
-    fig.add_trace(go.Scattermap(lat=df["lat"], lon=df["lon"], mode="markers", name="halka",
-                                marker={"size": 33, "color": ring, "opacity": 1},
-                                hoverinfo="skip", showlegend=False))
-    df["hover"] = text
-    df["ink"] = [CATEGORY_TEXT_COLORS.get(c, "#000") for c in df["category"]]
-    # Scattermap yazı rengi nokta başına verilemez: yazı rengine göre ayrı izler
-    for ink, part in df.groupby("ink", sort=False):
-        fig.add_trace(go.Scattermap(
-            lat=part["lat"], lon=part["lon"], mode="markers+text", name="istasyonlar",
-            marker={"size": 29, "color": [category_color(c) for c in part["category"]]},
-            text=[tr_num(v, 0) for v in part["pm25"]], textposition="middle center",
-            textfont={"size": 12, "color": ink},
-            hovertext=list(part["hover"]), hoverinfo="text", showlegend=False))
-    style = "carto-darkmatter" if t.name == "dark" else "carto-positron"
-    view = ({"center": {"lat": 39.75, "lon": 30.0}, "zoom": 4.75} if narrow
-            else {"center": {"lat": 39.8, "lon": 30.1}, "zoom": 5.65})
+    # öncü çizgiler ve gerçek konum noktaları (yalnızca yeri değişen işaretler için)
+    lead_lon: list[float | None] = []
+    lead_lat: list[float | None] = []
+    for (lon, lat), (slon, slat) in zip(true_pts, shown, strict=True):
+        if math.hypot(slon - lon, _merc(slat) - _merc(lat)) > 0.02:
+            lead_lon += [lon, slon, None]
+            lead_lat += [lat, slat, None]
+    if lead_lon:
+        fig.add_trace(go.Scattergeo(lon=lead_lon, lat=lead_lat, mode="lines", name="öncü",
+                                    line={"color": t.text, "width": 0.8}, hoverinfo="skip",
+                                    showlegend=False))
+    fig.add_trace(go.Scattergeo(lon=[p[0] for p in true_pts], lat=[p[1] for p in true_pts],
+                                mode="markers", name="konum", hoverinfo="skip",
+                                marker={"size": 4, "color": t.text}, showlegend=False))
+    ring = [t.danger if r["is_alert"] else t.warn if r["risk"] else t.text for r in rows]
+    fig.add_trace(go.Scattergeo(
+        lon=[p[0] for p in shown], lat=[p[1] for p in shown], mode="markers+text",
+        name="istasyonlar",
+        marker={"size": MARKER_PX, "color": [category_color(r["category"]) for r in rows],
+                "line": {"color": ring,
+                         "width": [2.4 if r["is_alert"] or r["risk"] else 1 for r in rows]},
+                "opacity": 1},
+        text=[tr_num(r["pm25"], 0) for r in rows], textposition="middle center",
+        textfont={"family": "Instrument Serif, Georgia, serif", "size": 19,
+                  "color": [CATEGORY_TEXT_COLORS.get(r["category"], "#000") for r in rows]},
+        hovertext=hover, hoverinfo="text", showlegend=False))
+    grid = {"showgrid": True, "gridcolor": t.grid, "gridwidth": 0.6, "dtick": 1}
     fig.update_layout(**plotly_layout(
-        t, height=340 if narrow else 430, map={"style": style, **view},
-        margin={"l": 0, "r": 0, "t": 0, "b": 0}))
+        t, height=height, dragmode=False, margin={"l": 0, "r": 0, "t": 0, "b": 0},
+        geo={"projection": {"type": "mercator"}, "resolution": 50,
+             "lonaxis": {"range": list(MAP_LON), **grid},
+             "lataxis": {"range": list(MAP_LAT), **grid},
+             "showland": True, "landcolor": t.surface,
+             "showocean": True, "oceancolor": t.surface_alt,
+             "showlakes": True, "lakecolor": t.surface_alt,
+             "showcountries": True, "countrycolor": t.muted, "countrywidth": 0.6,
+             "showcoastlines": True, "coastlinecolor": t.text, "coastlinewidth": 0.7,
+             "showframe": False, "bgcolor": "rgba(0,0,0,0)"}))
     return fig
 
 

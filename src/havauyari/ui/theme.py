@@ -414,15 +414,11 @@ html, body, .stApp,
   color:var(--hu-bg) !important; border-color:var(--hu-text) !important; }}
 [data-testid="stButtonGroup"] button[aria-checked="true"] p {{ color:var(--hu-bg) !important; }}
 [data-testid="stPlotlyChart"] {{ border-top:1px solid var(--hu-border); padding-top:8px; }}
-/* Harita karoları soğuk gri: kâğıt tonuna hafifçe ısıtılır */
-[class*="st-key-map-"] [data-testid="stPlotlyChart"] {{ border-top:0; padding-top:0;
-  filter:{"sepia(.22) saturate(.9)" if t.name == "light" else "sepia(.12)"}; }}
 [data-testid="stExpander"] details {{ border-radius:2px; border-color:var(--hu-border); background:transparent; }}
 [data-testid="stExpander"] summary p {{ font-family:{MONO} !important; font-size:0.8rem; letter-spacing:.04em; }}
 :focus-visible {{ outline:2px solid var(--hu-ember) !important; outline-offset:3px; }}
 @media (prefers-reduced-motion: reduce) {{ * {{ transition:none !important; animation:none !important; }} }}
 
-/* Harita: sunucu yakınlığı seçer, CSS ekran genişliğine göre görünümü */
 .st-key-map-narrow {{ display:none; }}
 @media (max-width: 900px) {{
   .hu-hero {{ grid-template-columns:1fr; gap:24px; }}

@@ -209,10 +209,27 @@ def test_uppercase_labels_protect_micro_sign(service, monkeypatch):
         assert "µ" not in re.sub(r'<span class="hu-u">.*?</span>', "", label), label
 
 
-def test_map_has_narrow_variant():
-    from havauyari.ui.components import map_figure
+def test_map_declutters_nearby_stations():
+    """Yakın istasyonlar (İstanbul, Bursa, Ankara ikilileri) üst üste binip değer gizlememeli;
+    değerler panonun serif rakamıyla yazılır."""
+    import math
 
-    rows = [{"name": "a", "lat": 40, "lon": 29, "pm25": 20, "category": "Orta",
-             "is_alert": False, "risk": False}]
-    wide, narrow = map_figure(rows), map_figure(rows, narrow=True)
-    assert narrow.layout.map.zoom < wide.layout.map.zoom
+    from havauyari.ui.components import MIN_SEP_DEG, _merc, declutter, map_figure
+
+    pts = [(28.87, 41.10), (29.10, 41.03), (29.93, 40.77), (29.06, 40.19), (29.07, 40.20),
+           (32.86, 39.97), (32.67, 39.95), (27.13, 38.42), (29.0, 41.0)]
+    out = declutter(pts)
+    for i in range(len(out)):
+        for j in range(i + 1, len(out)):
+            d = math.hypot(out[i][0] - out[j][0], _merc(out[i][1]) - _merc(out[j][1]))
+            assert d >= MIN_SEP_DEG * 0.999, (i, j, d)
+    assert declutter(pts) == out                              # her çizimde aynı yerleşim
+
+    rows = [{"name": n, "lat": la, "lon": lo, "pm25": v, "category": "Orta",
+             "is_alert": False, "risk": False}
+            for n, (lo, la), v in zip("ab", pts[:2], (16, 10), strict=True)]
+    fig = map_figure(rows)
+    stations = next(tr for tr in fig.data if tr.name == "istasyonlar")
+    assert list(stations.text) == ["16", "10"]
+    assert "Instrument Serif" in stations.textfont.family
+    assert any(tr.name == "öncü" for tr in fig.data)          # gerçek konuma bağlayan çizgi

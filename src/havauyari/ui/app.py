@@ -231,12 +231,12 @@ with tab_overview:
         section("Harita", fig="Şekil 2")
         left, right = st.columns([7, 5], gap="large")
         with left:
-            # Harita yakınlığı sunucuda seçilir; genişlik ise tarayıcıda bilinir. İki görünüm
-            # üretilir, CSS ekran genişliğine göre birini gösterir (ui/theme.py).
+            # SVG harita en-boy oranını korur: geniş ve dar ekran için iki yükseklik üretilir,
+            # CSS ekran genişliğine göre birini gösterir (dar ekranda üstte-altta boşluk kalmaz)
             with st.container(key="map-wide"):
                 st.plotly_chart(map_figure(rows, T), width="stretch", config=MAP_CONFIG)
             with st.container(key="map-narrow"):
-                st.plotly_chart(map_figure(rows, T, narrow=True), width="stretch",
+                st.plotly_chart(map_figure(rows, T, height=260), width="stretch",
                                 config=MAP_CONFIG)
         with right:
             html(reading_key())

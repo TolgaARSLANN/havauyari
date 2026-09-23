@@ -380,11 +380,29 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
 
 ## FAZ 6: Kullanıcı Arayüzü (Streamlit) · ~4-5 gün
 
-- [ ] **6.1 Uygulama iskeleti**: şehir seçimi, API'den veri çekme
-- [ ] **6.2 Tahmin grafiği**: 72 saat + belirsizlik bandı + AQI renkli arka plan
-- [ ] **6.3 Türkiye haritası** (Folium): şehir başına anlık/yarınki kategori
-- [ ] **6.4 Açıklama ve öneri**: SHAP "neden?" paneli, bilgilendirme amaçlı öneriler (tıbbi tavsiye değil)
-- [ ] **6.5 Model performans sayfası**: geçmiş tahmin ve gerçekleşen karşılaştırması
+- [x] **6.1 Uygulama iskeleti**: şehir seçimi, API'den veri çekme
+  - `ui/app.py` (Streamlit, 4 sekme: Genel bakış, İstasyon, Model performansı, Hakkında).
+    Tahmin servisini aynı süreçte kullanır (tek uygulama → deploy kolay); servis fabrikası
+    `ui/state.py` üzerinden değiştirilebilir. Grafik/metin parçaları `ui/components.py`'de, saf
+    ve test edilebilir. Çalıştırma: `make ui`.
+- [x] **6.2 Tahmin grafiği**: 72 saat + belirsizlik bandı + AQI renkli arka plan
+  - Model tek ufuklu (24 s); son 24 saatte her saat verilen tahminler önümüzdeki 24 saati
+    kapsadığı için ileriye dönük eğri + %80 bant çizilir. Aynı grafikte son 72 saatin ölçümü ve
+    o saatler için 24 s önceden verilmiş tahminler (canlı performans), AQI renk bantları ve
+    35,5 eşik çizgisi. Servise `trajectory` ve `history` alanları eklendi (API'de de var).
+- [x] **6.3 Türkiye haritası** (Folium): şehir başına anlık/yarınki kategori
+  - Folium yerine Plotly `Scattermap` (anahtarsız, ek bileşen gerektirmez); istasyonlar yarınki
+    tahmin kategorisinin EPA rengiyle, üzerine gelince tahmin/uyarı/risk.
+- [x] **6.4 Açıklama ve öneri**: SHAP "neden?" paneli, bilgilendirme amaçlı öneriler (tıbbi tavsiye değil)
+  - Özellik katkıları okunur Türkçe etiketlerle çubuk grafikte ve tek cümlelik özette
+    ("Tahmini en çok … yükseltiyor; en çok … düşürüyor"). Kategoriye göre EPA rehberinden
+    özetlenmiş genel bilgilendirme + sorumluluk reddi.
+- [x] **6.5 Model performans sayfası**: geçmiş tahmin ve gerçekleşen karşılaştırması
+  - Geri test metrikleri (model kartından), uyarı dengesi, kalibrasyon ve özellik ailesi
+    grafikleri. İstasyon sekmesinde canlı kontrol: son ~72 saatte 24 s önceden verilmiş
+    tahminlerin gerçekleşen ölçüme göre MAE'si (ilk bakışta Ankara-Keçiören 7,4 vs geri test 6,8).
+  - Testler (`tests/test_ui.py`): bileşenler + Streamlit `AppTest` ile sahte servisle duman testi.
+    Canlı veriyle tarayıcıda doğrulandı.
 
 ## FAZ 7: MLOps ve Otomasyon · ~3-4 gün
 

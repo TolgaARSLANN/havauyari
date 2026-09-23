@@ -43,6 +43,20 @@ class ModelInfo(BaseModel):
     trained_on: str
 
 
+class TrajectoryPoint(BaseModel):
+    issued_at: datetime
+    target_time: datetime
+    pm25: float
+    low: float
+    high: float
+    actual: float | None = Field(description="Gerçekleşen ölçüm (henüz yoksa null)")
+
+
+class HistoryPoint(BaseModel):
+    time: datetime
+    pm25: float | None
+
+
 class Forecast(BaseModel):
     station: str
     station_name: str
@@ -57,6 +71,10 @@ class Forecast(BaseModel):
     explanation: Explanation
     latest_measurement: Measurement
     model: ModelInfo
+    trajectory: list[TrajectoryPoint] = Field(
+        description="Son 96 saatte her saat verilmiş 24 s sonrası tahminler; son 24'ü "
+                    "önümüzdeki 24 saati kapsar")
+    history: list[HistoryPoint] = Field(description="Son 72 saatin istasyon ölçümleri")
 
 
 class StationError(BaseModel):

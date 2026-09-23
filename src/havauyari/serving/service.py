@@ -109,6 +109,12 @@ class ForecastService:
         self._cache[key] = result
         return result
 
+    def _features(self, station: dict, feats: pd.DataFrame) -> pd.DataFrame:
+        out = feats.copy()
+        out["station_code"] = self.a.card["station_codes"][station["slug"]]
+        out["city_code"] = self.a.card["city_codes"][station["city"]]
+        return out[self.a.card["features"]]
+
     def _forecast(self, station: dict, now: datetime) -> dict:
         raw = self.provider.station_frame(station, now)
         frame = prepare_frame(raw)
@@ -117,11 +123,9 @@ class ForecastService:
             raise DataUnavailable(
                 f"{station['name']}: son {FEATURE_FFILL_HOURS} saatte PM2.5 ölçümü yok")
 
-        row = feats.loc[[now]].copy()
-        row["station_code"] = self.a.card["station_codes"][station["slug"]]
-        row["city_code"] = self.a.card["city_codes"][station["city"]]
-        X = row[self.a.card["features"]]
+        X = self._features(station, feats.loc[[now]])
         pred = max(float(self.a.booster.predict(X)[0]), 0.0)
+        trajectory = self._trajectory(station, raw, feats, now)
         lo, hi = apply_intervals([pred], self.a.interval_table)
         threshold = decision_threshold(station["slug"], self.a.thresholds)
         expl = explain_row(self.a.booster, X, top=5)
@@ -159,7 +163,32 @@ class ForecastService:
             },
             "model": {"name": self.a.card["model"], "created": self.a.card["created"],
                       "trained_on": self.a.card["trained_on"]},
+            "trajectory": trajectory,
+            "history": measurement_history(raw, now),
         }
+
+    def _trajectory(self, station: dict, raw: pd.DataFrame, feats: pd.DataFrame,
+                    now: datetime, hours_back: int = 72) -> list[dict]:
+        """Son `hours_back + 24` saatte her saat verilmiş 24 s sonrası tahminler.
+
+        t anında verilen tahmin t+24'ü hedefler. Son 24 saatte verilenler önümüzdeki 24 saati
+        kapsar (ileriye dönük eğri); daha öncekiler, gerçekleşen ölçümle karşılaştırılabilir
+        (canlı performans). Her tahmin yalnızca kendi t anına kadarki veriyi kullanır.
+        """
+        start = now - timedelta(hours=hours_back + HORIZON - 1)
+        issued = feats.loc[start:now]
+        issued = issued[issued[STATION_TARGET].notna()]
+        if issued.empty:
+            return []
+        pred = self.a.booster.predict(self._features(station, issued)).clip(min=0)
+        lo, hi = apply_intervals(pred, self.a.interval_table)
+        target = issued.index + timedelta(hours=HORIZON)
+        actual = raw[STATION_TARGET].reindex(target).to_numpy()
+        return [{"issued_at": i, "target_time": t, "pm25": round(float(p), 1),
+                 "low": round(float(a), 1), "high": round(float(b), 1),
+                 "actual": None if pd.isna(y) else round(float(y), 1)}
+                for i, t, p, a, b, y in zip(issued.index, target, pred, lo, hi, actual,
+                                            strict=True)]
 
     def alerts(self, only_alerts: bool = False) -> list[dict]:
         out = []
@@ -172,3 +201,10 @@ class ForecastService:
             if not only_alerts or f["alert"]["is_alert"] or f["alert"]["risk"]:
                 out.append(f)
         return out
+
+
+def measurement_history(raw: pd.DataFrame, now: datetime, hours: int = 72) -> list[dict]:
+    """Son `hours` saatin istasyon ölçümleri (grafik için)."""
+    s = raw[STATION_TARGET].loc[now - timedelta(hours=hours - 1):now]
+    return [{"time": t, "pm25": None if pd.isna(v) else round(float(v), 1)}
+            for t, v in s.items()]

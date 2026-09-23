@@ -7,6 +7,9 @@ final:
 api:
 	uvicorn havauyari.serving.app:app --reload
 
+ui:
+	streamlit run src/havauyari/ui/app.py
+
 sim-survey:
 	python -m havauyari.data.fetch_sim survey
 

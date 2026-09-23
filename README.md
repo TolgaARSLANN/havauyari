@@ -107,6 +107,15 @@ curl http://127.0.0.1:8000/forecast/izmir_konak
 ```
 Uç noktalar: `/health`, `/stations`, `/forecast/{station}`, `/alerts?only_alerts=true`. Aynı saat içindeki tekrar istekler önbellekten döner.
 
+## Pano
+```bash
+pip install -e ".[api,ui]"
+make ui      # http://localhost:8501
+```
+- **Genel bakış:** Türkiye haritasında istasyonlar yarınki tahmin kategorisinin rengiyle, uyarı ve risk sayıları, tüm istasyonların tablosu
+- **İstasyon:** 24 saat sonrası tahmin, %80 aralık, uyarı durumu, genel sağlık bilgilendirmesi; son 72 saatin ölçümü + aynı saatler için verilmiş tahminler + önümüzdeki 24 saatin tahmin eğrisi; "Bu tahmin neden böyle?" açıklaması
+- **Model performansı:** geri test sonuçları, uyarı dengesi ve kalibrasyon grafikleri
+
 ## Proje Yapısı
 ```
 src/havauyari/
@@ -161,7 +170,7 @@ Ayrıntılı alt fazlar ve alınan kararlar: [docs/YOL_HARITASI.md](docs/YOL_HAR
 - [x] Deney takibi: MLflow yerine hafif kayıt (`reports/deney_kaydi.csv` + `models/model_card.json`)
 - [ ] Optuna ile hiperparametre araması (isteğe bağlı; zirve deneyi sınırın parametrede değil bilgide olduğunu gösterdi)
 - [x] Tahmin API'si (FastAPI): `/forecast/{station}`, `/alerts`, `/stations`, `/health`
-- [ ] Streamlit panosu + Türkiye haritası
+- [x] Streamlit panosu: harita, tahmin grafiği ve %80 bant, uyarı/risk, "neden?" açıklaması, model performansı
 - [ ] Docker + GitHub Actions ile günlük otomatik tahmin
 - [ ] Hugging Face Spaces'e deploy
 

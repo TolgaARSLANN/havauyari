@@ -1,5 +1,5 @@
 .PHONY: install data quality process train baselines test lint \
-        sim-survey sim-data forecasts stations train-station final api
+        sim-survey sim-data forecasts stations train-station final api ui
 
 final:
 	python -m havauyari.models.final

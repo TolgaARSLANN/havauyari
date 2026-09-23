@@ -334,8 +334,25 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
   - "Üst sınır ≥ 35,5" koşulu gerçek uyarıların %95'ini kapsıyor (precision %39): kullanıcıya
     "uyarı riski" olarak gösterilebilir. Canlı tablo: `models/prediction_interval.json`.
     Rapor: [`reports/tahmin_araligi_h24.md`](../reports/tahmin_araligi_h24.md)
-- [ ] **4.6 SHAP**: global önem + tek tahmin açıklaması
-- [ ] **4.7 Final model kaydı**: `models/` altında sürümlü model + metrik JSON
+- [x] **4.6 SHAP**: global önem + tek tahmin açıklaması
+  - LightGBM `pred_contrib` (TreeSHAP ile aynı değerler, ek bağımlılık yok), son 12 aydan
+    30.000 tahmin: [`reports/aciklanabilirlik_h24.md`](../reports/aciklanabilirlik_h24.md).
+  - **Katkı payları:** istasyon PM2.5 geçmişi %36, **o gün yayımlanan hava tahmini %30**,
+    ERA5 meteoroloji %15, takvim %8, CAMS diğer kirleticiler %7, CAMS PM2.5 yalnızca %0,6.
+    → Faz 3.8'in (hava tahmini) katkısı doğrulandı; CAMS'ın PM2.5 değeri istasyon tahmininde
+    neredeyse hiç kullanılmıyor.
+  - Yönler fiziksel olarak tutarlı: tahmini ortalama rüzgâr ve yağış düşürüyor; durgun saat,
+    nem, sıcaklık aralığı, ısıtma ihtiyacı ve yüksek basınç artırıyor.
+  - Tek tahmin açıklaması (`models.final.explain_row`) API/arayüzde kullanılacak. Örnek: Bursa
+    2025-12-20 03:00 → tahmin 110 (gerçek 127); en büyük katkılar o anki ölçüm (+17) ve
+    tahmini ortalama rüzgârın 2 km/sa olması (+16).
+- [x] **4.7 Final model kaydı**: `models/` altında sürümlü model + metrik JSON
+  - `python -m havauyari.models.final`: tüm veriyle (238.579 satır, 99 özellik) eğitilen
+    L2 modeli `models/lgbm_station_h24.txt` (2,8 MB, git dışı; komutla yeniden üretilir) ve
+    `models/model_card.json` (özellikler, eğitim dönemi, parametreler, geri test sonuçları,
+    istasyon kodları, eşik ve aralık dosyalarına bağlantı).
+- [x] **4.1 Deney takibi** (MLflow yerine hafif çözüm): `reports/deney_kaydi.csv` +
+  `models/model_card.json`. MLflow ağır bağımlılık getirdiği için şimdilik eklenmedi.
 
 ## FAZ 5: Tahmin Servisi (API) · ~3-4 gün
 

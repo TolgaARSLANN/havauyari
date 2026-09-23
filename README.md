@@ -106,6 +106,9 @@ tests/          # birim testleri (AQI, temizlik, sızıntı kontrolü, metrikler
 - Uyarıların yakalanma oranı 0,25'ten **0,66'ya** çıkarken isabet de 0,36'dan **0,73'e** yükseliyor: hem daha çok uyarı yakalanıyor hem daha az yanlış alarm veriliyor.
 - **Uyarı eşiği ayarı:** Model zirveleri bastırdığı için karar eşiği, yakalama oranı en az %80 olacak şekilde *yalnızca geçmiş tahminlerden* seçildi (28,5 µg/m³). Son 12 ayda uyarıların **%82,4'ü** yakalandı (sabit 35,5 eşikle %65,7). Bedeli daha çok yanlış alarm: isabet %73'ten %57'ye iniyor. [Ayrıntılar](reports/uyari_esigi_h24.md)
 - **Yeni başlayan kirlilik:** 24 saat sonra başlayacak uyarıların %34'ü önceden görülüyor ("yarın da bugün gibi" yöntemi %0, CAMS %26). [Hata analizi](reports/hata_analizi_istasyon_h24.md)
+- **İstasyon bazlı eşik:** Her istasyon kendi eşiğini alır (18,5–32 µg/m³); en zayıf istasyonda yakalama %39 → %71.
+- **Tahmin aralığı:** Her tahmine %80 aralık eşlik eder (örn. "29 µg/m³, %80 olasılıkla 17–45"); son 12 ayda gerçek değerlerin %82,9'u aralıkta kaldı. [Ayrıntılar](reports/tahmin_araligi_h24.md)
+- **Açıklanabilirlik:** Tahminin %30'u o gün yayımlanan hava tahmininden, %36'sı istasyonun geçmişinden geliyor; CAMS'ın PM2.5 değerinin payı yalnızca %0,6. Her tahmin için "neden" açıklaması üretilebiliyor. [Ayrıntılar](reports/aciklanabilirlik_h24.md)
 - **Uygulanabilirlik:** Ana model yalnızca bugün erişilebilen verileri kullanır (istasyon geçmişi, CAMS'ın şu ana kadarki değerleri, o gün yayımlanmış hava tahmini). "Üst sınır" modeli ek olarak CAMS'ın gelecek değerlerini görür; aradaki farkın küçük olması, sonucun CAMS'ın tahmin başarısına bağımlı olmadığını gösteriyor.
 - İstasyon ve mevsim kırılımları: [reports/backtest_istasyon_h24.md](reports/backtest_istasyon_h24.md)
 
@@ -118,7 +121,7 @@ Ayrıntılı alt fazlar ve alınan kararlar: [docs/YOL_HARITASI.md](docs/YOL_HAR
 - [x] Özellik mühendisliği (meteoroloji, tatiller, diğer kirleticiler)
 - [x] Gerçek istasyon ölçümlerine geçiş (SİM) ve hava tahmini özellikleri
 - [x] Modelleme ve geri test: ham CAMS'a göre MAE %47,7 daha düşük
-- [ ] Uyarı eşiği ayarı (istasyon bazında), hata analizi, SHAP
+- [x] Hata analizi, istasyon bazlı uyarı eşiği, tahmin aralıkları, açıklanabilirlik, final model
 - [ ] Optuna, MLflow, hata analizi, SHAP, tahmin aralıkları
 - [ ] FastAPI (`/forecast/{city}`, `/alerts`)
 - [ ] Streamlit panosu + Türkiye haritası

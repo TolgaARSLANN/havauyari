@@ -1,7 +1,7 @@
 # 🌫️ HavaUyarı: Akıllı Hava Kalitesi Erken Uyarı Sistemi
 
 [![CI](https://github.com/TolgaARSLANN/havauyari/actions/workflows/ci.yml/badge.svg)](https://github.com/TolgaARSLANN/havauyari/actions/workflows/ci.yml)
-[![Günlük tahmin](https://github.com/TolgaARSLANN/havauyari/actions/workflows/gunluk-tahmin.yml/badge.svg)](https://github.com/TolgaARSLANN/havauyari/actions/workflows/gunluk-tahmin.yml)
+[![Canlı izleme](https://github.com/TolgaARSLANN/havauyari/actions/workflows/izleme.yml/badge.svg)](https://github.com/TolgaARSLANN/havauyari/actions/workflows/izleme.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 
 Türkiye şehirlerindeki hava kalitesi izleme istasyonlarında **24 saat sonra ölçülecek PM2.5 değerini tahmin eden**, bu tahmini hava kalitesi indeksi (AQI) kategorisine çeviren ve sağlıksız düzeyler için **erken uyarı** üreten, uçtan uca bir makine öğrenmesi projesi.
@@ -131,11 +131,11 @@ docker compose up --build
 İmaj her değişiklikte CI'da derlenir; API'nin modeli yüklediği ve panonun yanıt verdiği sağlık kontrolüyle doğrulanır.
 
 ## Günlük Tahmin ve Canlı İzleme
-GitHub Actions her gün 08.17'de ([gunluk-tahmin.yml](.github/workflows/gunluk-tahmin.yml)) tüm istasyonlar için 24 saat sonrasının tahminini üretir ve [izleme/tahmin_kaydi.csv](izleme/tahmin_kaydi.csv) dosyasına ekler. Hedef saat geldiğinde her tahmin gerçekleşen ölçümle karşılaştırılır; son 14 günün canlı hatası [izleme/durum.json](izleme/durum.json) dosyasında tutulur ve panonun Model sekmesinde gösterilir.
+Her gün 08.17'de tüm istasyonlar için 24 saat sonrasının tahmini üretilir ve [izleme/tahmin_kaydi.csv](izleme/tahmin_kaydi.csv) dosyasına eklenir. Hedef saat geldiğinde her tahmin gerçekleşen ölçümle karşılaştırılır; son 14 günün canlı hatası [izleme/durum.json](izleme/durum.json) dosyasında tutulur ve panonun Model sekmesinde gösterilir.
 
-- **Sapma uyarısı:** Son 14 günde en az 40 tahmin değerlendirildiyse ve canlı ortalama hata geri testin (6,78 µg/m³) 1,5 katını aşıyorsa depoda `sapma` etiketli bir konu açılır.
-- **Veri kesintisi:** Ölçüm göndermeyen istasyon o gün atlanır; hiçbir istasyonda tahmin üretilemezse iş başarısız olur ve bildirim gelir.
-- Elle çalıştırma: `make daily` ya da Actions sayfasından "Run workflow".
+- **Neden yerelde çalışıyor?** SİM yurt dışı IP'lerine kapalı; GitHub Actions sunucuları ölçümlere erişemiyor (bağlantı zaman aşımı, iki denemede de doğrulandı). Bu yüzden tahmin işi Türkiye'deki bir makinede Windows Görev Zamanlayıcı ile çalışır ([scripts/gunluk_tahmin.sh](scripts/gunluk_tahmin.sh)) ve sonucu depoya gönderir; makine kapalıysa açılışta telafi eder.
+- **Bekçi (bulutta):** [izleme.yml](.github/workflows/izleme.yml) yeni kayıt gelince sapmayı, her gün 15.00'te de kaydın güncelliğini denetler. Canlı hata geri testin (6,78 µg/m³) 1,5 katını aşarsa `sapma`, kayıt 30 saatten eskiyse `kesinti` etiketli konu açılır.
+- Elle çalıştırma: `make daily`. Ayrıntılar: [izleme/README.md](izleme/README.md)
 
 ## Proje Yapısı
 ```
@@ -146,11 +146,12 @@ src/havauyari/
 ├─ evaluation/  # ileriye kayan pencereli geri test çerçevesi, metrikler, hata analizi
 ├─ alerts/      # AQI dönüşümü, uyarı eşikleri
 ├─ serving/     # canlı veri, tahmin akışı, FastAPI uygulaması
-├─ ops/         # günlük tahmin işi, tahmin kaydı, canlı izleme ve sapma kararı
+├─ ops/         # günlük tahmin işi, tahmin kaydı, canlı izleme, sapma ve kesinti bekçisi
 ├─ ui/          # Streamlit panosu ve tasarım sistemi
 └─ config.py
 models/         # canlı model (LightGBM), model kartı, istasyon listesi, eşik ve aralık tabloları
-izleme/         # günlük tahmin kaydı ve canlı izleme durumu (GitHub Actions günceller)
+izleme/         # günlük tahmin kaydı ve canlı izleme durumu (günlük iş günceller)
+scripts/        # günlük tahmin betiği ve Windows zamanlanmış görev kurulumu
 notebooks/      # keşifsel veri analizi (EDA)
 reports/        # kalite, geri test, hata analizi, deney ve açıklanabilirlik raporları
 docs/           # yol haritası, tasarım felsefesi ve levha
@@ -197,7 +198,7 @@ Ayrıntılı alt aşamalar ve alınan kararlar: [docs/YOL_HARITASI.md](docs/YOL_
 - [x] Tahmin API'si (FastAPI): `/forecast/{station}`, `/alerts`, `/stations`, `/health`
 - [x] Streamlit panosu: harita, tahmin grafiği ve %80'lik aralık, uyarı ve uyarı riski, "neden?" açıklaması, model performansı
 - [x] Docker (API + pano) ve CI'da imaj doğrulaması
-- [x] GitHub Actions ile günlük otomatik tahmin, canlı izleme ve sapma uyarısı
+- [x] Günlük otomatik tahmin (yerel zamanlanmış görev), bulutta canlı izleme, sapma ve kesinti uyarısı
 - [ ] Hugging Face Spaces'te yayına alma
 
 ## Sınırlamalar

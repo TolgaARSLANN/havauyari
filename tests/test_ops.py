@@ -75,6 +75,18 @@ def test_unreachable_source_fails_fast(models_dir, tmp_path):
     assert "bağlanılamadı" in status["stations_failed"]["s2"]
 
 
+def test_watchdog_findings():
+    from havauyari.ops.check import findings
+
+    fresh = {"run_at": "2026-01-15T08:00:00", "drift": False}
+    assert findings(fresh, NOW) == []                           # 4 saatlik kayıt: sorun yok
+    stale = findings(fresh, NOW + timedelta(hours=30))
+    assert [f["label"] for f in stale] == ["kesinti"] and "34 saat önce" in stale[0]["body"]
+    drift = findings({**fresh, "drift": True, "reason": "MAE 12"}, NOW)
+    assert [f["label"] for f in drift] == ["sapma"] and "MAE 12" in drift[0]["body"]
+    assert findings(None, NOW)[0]["label"] == "kesinti"
+
+
 def _log(errors, days_ago=1):
     t = pd.Timestamp(NOW) - timedelta(days=days_ago)
     rows = [{"issued_at": t - timedelta(hours=24 + i), "target_time": t - timedelta(hours=i),

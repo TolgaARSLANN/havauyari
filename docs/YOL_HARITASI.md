@@ -445,18 +445,33 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
 - [x] **7.2 CI genişletme**: testler + lint + Docker build
   - `docker` işi: imaj derlenir (GitHub Actions önbelleğiyle), API `/health` model yüklü
     olmalı, pano `/_stcore/health` yanıt vermeli; hata olursa konteyner günlükleri basılır.
-- [x] **7.3 Günlük tahmin işi**: GitHub Actions cron → veri çek, tahmin üret, sonuçları kaydet
-  - `.github/workflows/gunluk-tahmin.yml` (her gün 08.17 TSİ + elle tetikleme),
-    `python -m havauyari.ops.daily`. Sonuçlar `izleme/tahmin_kaydi.csv` ve `izleme/durum.json`
-    dosyalarına yazılıp depoya işlenir; özet Actions sayfasında. Hiçbir istasyonda tahmin
-    üretilemezse iş başarısız olur (veri kaynağı sorunu).
-  - İlk canlı çalıştırma (yerelde, 25 Eylül 19.00): 8 istasyonun 7'si; Ümraniye son 3 saatte
-    ölçüm vermediği için atlandı (tasarlandığı gibi).
+- [x] **7.3 Günlük tahmin işi**: ~~GitHub Actions cron~~ yerel zamanlanmış görev → veri çek,
+  tahmin üret, sonuçları kaydet
+  - `python -m havauyari.ops.daily`: sonuçlar `izleme/tahmin_kaydi.csv` ve `izleme/durum.json`
+    dosyalarına yazılır. Hiçbir istasyonda tahmin üretilemezse iş başarısız olur; kaynağa
+    bağlanılamazsa kalan istasyonlar için ayrı ayrı zaman aşımı beklenmez.
+  - **Bulgu:** GitHub Actions sunucuları SİM'e bağlanamıyor (yurt dışı IP engeli; iki denemede
+    de `ConnectTimeout`, Open-Meteo'ya erişim sorunsuz). Karar: iş Türkiye'deki makinede,
+    Windows Görev Zamanlayıcı ile her gün 08.17'de ve oturum açılışında çalışır
+    (`scripts/gunluk_tahmin.sh`, kurulum `scripts/gorev_kur.ps1`). Ayrı klonda
+    (`~/.havauyari-gunluk`) çalışır, depoya gönderir; makine kapalıysa açılışta telafi eder,
+    aynı gün ikinci kez çalışmaz. Self-hosted runner herkese açık depoda güvenlik riski
+    olduğu için seçilmedi.
+  - **Faz 8'e etkisi:** yurt dışında barındırılan pano da SİM'e erişemeyecek; yayındaki pano
+    tahminleri canlı hesaplamak yerine bu işin yayımladığı sonuçları okumalı.
+  - İlk canlı çalıştırma (25 Eylül 19.00): 8 istasyonun 7'si; Ümraniye son 3 saatte ölçüm
+    vermediği için atlandı (tasarlandığı gibi).
+  - Ayrıca: `models/final.py` matplotlib'i üst düzeyde içe aktarıyordu; servis buna bağlı
+    olduğu için matplotlib'siz kurulumlar (Docker, günlük iş) açılışta çöküyordu. CI docker
+    işi yakaladı; artık tembel içe aktarma + CI'da yalnızca çekirdek bağımlılıklı içe aktarma
+    denetimi (`minimal` işi).
 - [x] **7.4 İzleme**: tahmin ve gerçekleşen değerlerin kaydı, hata artarsa uyarı (drift sinyali)
   - Hedef saati geçen tahminler son 72 saatlik ölçümle eşleştirilir (ölçüm gecikirse sonraki
     günlerde yeniden denenir). Son 14 günde ≥ 40 değerlendirilmiş tahmin varsa ve canlı MAE
-    geri testin 1,5 katını aşarsa "sapma" işaretlenir ve `sapma` etiketli konu açılır (açık
-    konu varsa yorum eklenir). Panoda Model sekmesinde "Canlı izleme" bölümü.
+    geri testin 1,5 katını aşarsa "sapma" işaretlenir. Panoda Model sekmesinde "Canlı izleme".
+  - Bekçi bulutta (`.github/workflows/izleme.yml`, `ops/check.py`, SİM ve ek paket gerektirmez):
+    yeni kayıt gelince sapmayı, her gün 15.00'te kaydın güncelliğini denetler; `sapma` ya da
+    (kayıt 30 saatten eskiyse) `kesinti` etiketli konu açar, açık konu varsa yorum ekler.
 - [ ] **7.5 (Opsiyonel) Haftalık yeniden eğitim**
 
 ## FAZ 8: Yayın ve Portföy · ~2-3 gün

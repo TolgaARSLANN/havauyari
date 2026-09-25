@@ -1,0 +1,33 @@
+# Faz 7.4: canlı izleme bekçisi.
+# Günlük tahmin işi SİM'e yalnızca Türkiye'deki bir makineden erişebildiği için yerelde çalışır
+# (scripts/gunluk_tahmin.sh) ve sonucu izleme/ klasörüne işler. Bu iş akışı bulutta çalışır,
+# SİM gerektirmez:
+#   - yeni kayıt gelince: sapma işaretlendiyse "sapma" etiketli konu,
+#   - her gün 15.00 TSİ'de: kayıt 30 saatten eskiyse "kesinti" etiketli konu.
+name: Canlı izleme
+
+on:
+  push:
+    branches: [main]
+    paths: ["izleme/durum.json"]
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Kayıt güncel mi, sapma var mı?
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONPATH: src
+        run: python -m havauyari.ops.check --github

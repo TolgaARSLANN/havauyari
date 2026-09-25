@@ -423,55 +423,13 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
     açıklama; tablo görünümü alternatif olarak korunuyor.
   - Duyarlılık: 1024 px ve 375 px'te sayfa düzeyinde yatay taşma yok (ölçüldü); başlık yükleme
     sırasında hemen görünüyor.
-- [x] **6.7 Tasarım dili "Parçacık Defteri"** (6.6'nın yerini aldı) — felsefe ve levha:
-  `docs/tasarim/`. Kâğıt/mürekkep paleti, Instrument Serif + Instrument Sans + IBM Plex Mono,
-  kutu yerine ince çizgiler; PM2.5 nokta yoğunluğuyla gösterilir (istasyonlar tek ölçekte
-  parçacık bantları, saatlik tahmin nokta sütunları); köz kırmızısı yalnızca resmî eşik ve uyarı.
-  - Harita: WebGL karo haritası yerine SVG atlas (Scattergeo): değerler serif rakamla yazılır,
-    yakın istasyonlar (İstanbul, Bursa, Ankara ikilileri) ayrılıp gerçek konuma çizgiyle bağlanır.
-  - Gezinme: kart düğmesi detay sekmesini açar; seçili istasyon adreste (`?istasyon=...`).
-  - İstasyonlar paralel çekilir (SİM istek aralığı kilitle korunur), yükleme iskeleti.
-  - Sayfa dili `tr`; büyük harfli etiketlerde µ birimi korunur (aksi hâlde "MG/M³" olur).
 
 ## FAZ 7: MLOps ve Otomasyon · ~3-4 gün
 
-- [x] **7.1 Docker**: `Dockerfile` + `docker-compose.yml` (api + app)
-  - Tek imaj, iki servis (`uvicorn` 8000, `streamlit` 8501); pano tahmin servisini kendi
-    sürecinde çalıştırır. Paket düzenlenebilir kipte kurulur (`config.ROOT` dosya konumundan
-    hesaplanıyor), `libgomp1` (LightGBM), root olmayan kullanıcı, sağlık kontrolleri.
-  - Karar: canlı model (`models/lgbm_station_h24.txt`, 2,8 MB, metin) artık repoda; imaj,
-    günlük iş ve yayın ek indirme adımı olmadan çalışır.
-  - Yerelde Docker kurulu değil: imaj yalnızca CI'da derlenip doğrulanıyor.
-- [x] **7.2 CI genişletme**: testler + lint + Docker build
-  - `docker` işi: imaj derlenir (GitHub Actions önbelleğiyle), API `/health` model yüklü
-    olmalı, pano `/_stcore/health` yanıt vermeli; hata olursa konteyner günlükleri basılır.
-- [x] **7.3 Günlük tahmin işi**: ~~GitHub Actions cron~~ yerel zamanlanmış görev → veri çek,
-  tahmin üret, sonuçları kaydet
-  - `python -m havauyari.ops.daily`: sonuçlar `izleme/tahmin_kaydi.csv` ve `izleme/durum.json`
-    dosyalarına yazılır. Hiçbir istasyonda tahmin üretilemezse iş başarısız olur; kaynağa
-    bağlanılamazsa kalan istasyonlar için ayrı ayrı zaman aşımı beklenmez.
-  - **Bulgu:** GitHub Actions sunucuları SİM'e bağlanamıyor (yurt dışı IP engeli; iki denemede
-    de `ConnectTimeout`, Open-Meteo'ya erişim sorunsuz). Karar: iş Türkiye'deki makinede,
-    Windows Görev Zamanlayıcı ile her gün 08.17'de ve oturum açılışında çalışır
-    (`scripts/gunluk_tahmin.sh`, kurulum `scripts/gorev_kur.ps1`). Ayrı klonda
-    (`~/.havauyari-gunluk`) çalışır, depoya gönderir; makine kapalıysa açılışta telafi eder,
-    aynı gün ikinci kez çalışmaz. Self-hosted runner herkese açık depoda güvenlik riski
-    olduğu için seçilmedi.
-  - **Faz 8'e etkisi:** yurt dışında barındırılan pano da SİM'e erişemeyecek; yayındaki pano
-    tahminleri canlı hesaplamak yerine bu işin yayımladığı sonuçları okumalı.
-  - İlk canlı çalıştırma (25 Eylül 19.00): 8 istasyonun 7'si; Ümraniye son 3 saatte ölçüm
-    vermediği için atlandı (tasarlandığı gibi).
-  - Ayrıca: `models/final.py` matplotlib'i üst düzeyde içe aktarıyordu; servis buna bağlı
-    olduğu için matplotlib'siz kurulumlar (Docker, günlük iş) açılışta çöküyordu. CI docker
-    işi yakaladı; artık tembel içe aktarma + CI'da yalnızca çekirdek bağımlılıklı içe aktarma
-    denetimi (`minimal` işi).
-- [x] **7.4 İzleme**: tahmin ve gerçekleşen değerlerin kaydı, hata artarsa uyarı (drift sinyali)
-  - Hedef saati geçen tahminler son 72 saatlik ölçümle eşleştirilir (ölçüm gecikirse sonraki
-    günlerde yeniden denenir). Son 14 günde ≥ 40 değerlendirilmiş tahmin varsa ve canlı MAE
-    geri testin 1,5 katını aşarsa "sapma" işaretlenir. Panoda Model sekmesinde "Canlı izleme".
-  - Bekçi bulutta (`.github/workflows/izleme.yml`, `ops/check.py`, SİM ve ek paket gerektirmez):
-    yeni kayıt gelince sapmayı, her gün 15.00'te kaydın güncelliğini denetler; `sapma` ya da
-    (kayıt 30 saatten eskiyse) `kesinti` etiketli konu açar, açık konu varsa yorum ekler.
+- [ ] **7.1 Docker**: `Dockerfile` + `docker-compose.yml` (api + app)
+- [ ] **7.2 CI genişletme**: testler + lint + Docker build
+- [ ] **7.3 Günlük tahmin işi**: GitHub Actions cron → veri çek, tahmin üret, sonuçları kaydet
+- [ ] **7.4 İzleme**: tahmin ve gerçekleşen değerlerin kaydı, hata artarsa uyarı (drift sinyali)
 - [ ] **7.5 (Opsiyonel) Haftalık yeniden eğitim**
 
 ## FAZ 8: Yayın ve Portföy · ~2-3 gün

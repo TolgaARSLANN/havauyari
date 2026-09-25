@@ -598,34 +598,6 @@ def callout_html(kind: str, text: str, t: Tokens = LIGHT) -> str:
             f'<div>{text}</div></div>')
 
 
-def live_monitor_html(log: pd.DataFrame | None, status: dict | None,
-                      t: Tokens = LIGHT) -> str:
-    """Canlı izleme (izleme/ klasörü, günlük tahmin işi yazar): gerçekleşen ölçümle
-    değerlendirilmiş tahminlerin hatası, geri testle karşılaştırmalı."""
-    if log is None or status is None or log.empty:
-        return callout_html("info", "<b>Canlı izleme henüz başlamadı.</b> Günlük tahmin işi "
-                                    "ilk kaydını yazınca sonuçlar burada görünür.", t)
-    first = tr_datetime(pd.Timestamp(log["issued_at"].min()), year=False)
-    done = log.dropna(subset=["actual"])
-    if done.empty or not status.get("evaluated"):
-        return callout_html("info", f"<b>Canlı izleme başladı.</b> {first} tarihinden beri "
-                                    f"{len(log)} tahmin kaydedildi. Hedef saat geldikçe her "
-                                    "tahmin gerçekleşen ölçümle karşılaştırılacak.", t)
-    window, backtest = status["window_days"], status["backtest_mae"]
-    drift = status.get("drift", False)
-    return ('<div class="hu-kpis">'
-            + kpi_html("Canlı ortalama hata", tr_num(status["mae"], 2),
-                       f"Son {window} gün · geri test {tr_num(backtest, 2)}", "activity")
-            + kpi_html("Değerlendirilen tahmin", str(status["evaluated"]),
-                       f"İlk kayıt: {first}", "target")
-            + kpi_html("Aralık kapsaması", tr_pct(status["coverage_80"]),
-                       "Ölçümlerin %80'lik aralıkta kalma oranı", "eye")
-            + kpi_html("Sapma", "Var" if drift else "Yok",
-                       escape(status.get("reason") or "Canlı hata geri testle uyumlu"),
-                       "alert" if drift else "shield")
-            + "</div>")
-
-
 def mae_bars_html(t: Tokens = LIGHT) -> str:
     """Geri testte ortalama hata: HavaUyarı ve referans yöntemler (kısa sıra = daha iyi)."""
     worst = max(v for _, v in BACKTEST_MAE)

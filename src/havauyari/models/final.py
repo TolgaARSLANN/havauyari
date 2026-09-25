@@ -18,13 +18,17 @@ import json
 from datetime import date
 
 import lightgbm as lgb
-import numpy as np
-import pandas as pd
+import matplotlib
 
-from havauyari.config import MODELS_DIR, ROOT
-from havauyari.features.build import STATION_TARGET, feature_columns
-from havauyari.models.train import LGBM_PARAMS
-from havauyari.reporting import to_markdown
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
+
+from havauyari.config import MODELS_DIR, ROOT  # noqa: E402
+from havauyari.features.build import STATION_TARGET, feature_columns  # noqa: E402
+from havauyari.models.train import LGBM_PARAMS  # noqa: E402
+from havauyari.reporting import to_markdown  # noqa: E402
 
 HORIZON = 24
 TARGET = f"target_h{HORIZON}"
@@ -88,20 +92,7 @@ def explain_row(booster: lgb.Booster, row: pd.DataFrame, top: int = 8) -> pd.Dat
 
 
 # ---------------------------------------------------------------------------------------------
-def _pyplot():
-    """matplotlib yalnızca rapor grafikleri için gerekir ve geliştirme bağımlılığıdır. Tahmin
-    servisi bu modülden explain_row/family_of alır; üst düzeyde içe aktarılırsa API, pano ve
-    günlük iş (matplotlib'siz kurulumlar) açılışta çöker."""
-    import matplotlib
-
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
-    return plt
-
-
 def _bar(series: pd.Series, title: str, name: str, color: str = "#1f77b4") -> str:
-    plt = _pyplot()
     s = series.sort_values()
     fig, ax = plt.subplots(figsize=(8, 0.32 * len(s) + 1.2))
     ax.barh(s.index, s.to_numpy(), color=color)
@@ -116,7 +107,6 @@ def _bar(series: pd.Series, title: str, name: str, color: str = "#1f77b4") -> st
 def _local_plot(expl: pd.DataFrame, title: str, name: str) -> str:
     # "diğer" toplamı tabloda gösterilir; grafikte en etkili özellikler okunur kalsın diye yok
     e = expl.drop(index=["taban (ortalama)", "diğer özellikler"])["katkı (µg/m³)"][::-1]
-    plt = _pyplot()
     fig, ax = plt.subplots(figsize=(8, 0.4 * len(e) + 1.2))
     ax.barh(e.index, e.to_numpy(), color=["#d62728" if v > 0 else "#2ca02c" for v in e])
     ax.axvline(0, color="black", lw=0.8)

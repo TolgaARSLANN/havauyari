@@ -1,17 +1,5 @@
 .PHONY: install data quality process train baselines test lint \
-        sim-survey sim-data forecasts stations train-station final api ui \
-        daily docker up
-
-# Günlük tahmin ve canlı izleme (GitHub Actions her gün çalıştırır) -> izleme/
-daily:
-	python -m havauyari.ops.daily
-
-# API + pano konteynerde: http://localhost:8000/docs, http://localhost:8501
-docker:
-	docker build -t havauyari .
-
-up:
-	docker compose up --build
+        sim-survey sim-data forecasts stations train-station final api ui
 
 final:
 	python -m havauyari.models.final

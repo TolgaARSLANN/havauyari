@@ -18,11 +18,9 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 import pandas as pd
-import requests
 import streamlit as st
 
 from havauyari.config import ROOT
-from havauyari.ops.daily import LOG_PATH, STATUS_PATH, load_log
 from havauyari.serving.service import DataUnavailable
 from havauyari.ui import state
 from havauyari.ui.components import (
@@ -42,7 +40,6 @@ from havauyari.ui.components import (
     hourly_strip_html,
     kpi_html,
     legend_html,
-    live_monitor_html,
     mae_bars_html,
     map_figure,
     pipeline_html,
@@ -94,10 +91,6 @@ def load_forecasts(service) -> tuple[dict, dict]:
             return slug, service.forecast(slug), None
         except DataUnavailable as e:
             return slug, None, str(e)
-        except requests.RequestException as e:           # ağ kesintisi: sayfa çökmesin
-            name = service.a.stations[slug]["name"]
-            return slug, None, (f"{name}: veri kaynağına şu anda ulaşılamıyor "
-                                f"({type(e).__name__}); tahmin daha sonra yenilenecek.")
 
     ok, errors = {}, {}
     with ThreadPoolExecutor(max_workers=8) as pool:
@@ -394,14 +387,6 @@ with tab_model:
          + kpi_html("Aralık kapsaması", tr_pct(bt.get("interval_80_coverage", 0), 1),
                     "Ölçümlerin %80'lik aralıkta kalma oranı", "eye")
          + "</div>")
-
-    section("Canlı izleme", "Günlük tahmin işi her sabah tüm istasyonlar için tahmin üretir; "
-                            "ertesi gün her tahmin gerçekleşen ölçümle karşılaştırılır. Canlı "
-                            "hata geri testin 1,5 katını aşarsa sapma işaretlenir.",
-            fig="İzleme")
-    live_status = (json.loads(STATUS_PATH.read_text(encoding="utf-8"))
-                   if STATUS_PATH.exists() else None)
-    html(live_monitor_html(load_log(LOG_PATH), live_status, T))
 
     curves = load_json("perf_curves.json")
     if curves:

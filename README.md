@@ -1,11 +1,12 @@
 # 🌫️ HavaUyarı: Akıllı Hava Kalitesi Erken Uyarı Sistemi
 
 [![CI](https://github.com/TolgaARSLANN/havauyari/actions/workflows/ci.yml/badge.svg)](https://github.com/TolgaARSLANN/havauyari/actions/workflows/ci.yml)
+[![Günlük tahmin](https://github.com/TolgaARSLANN/havauyari/actions/workflows/gunluk-tahmin.yml/badge.svg)](https://github.com/TolgaARSLANN/havauyari/actions/workflows/gunluk-tahmin.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 
 Türkiye şehirlerindeki hava kalitesi izleme istasyonlarında **24 saat sonra ölçülecek PM2.5 değerini tahmin eden**, bu tahmini hava kalitesi indeksi (AQI) kategorisine çeviren ve sağlıksız düzeyler için **erken uyarı** üreten, uçtan uca bir makine öğrenmesi projesi.
 
-> 🚧 Geliştirme sürüyor: Veri, keşif, modelleme, tahmin servisi ve pano tamamlandı; otomasyon ve yayına alma aşamaları devam ediyor. Ayrıntılı plan: [docs/YOL_HARITASI.md](docs/YOL_HARITASI.md)
+> 🚧 Geliştirme sürüyor: Veri, keşif, modelleme, tahmin servisi, pano, Docker ve günlük otomatik tahmin tamamlandı; yayına alma aşaması devam ediyor. Ayrıntılı plan: [docs/YOL_HARITASI.md](docs/YOL_HARITASI.md)
 
 ## Problem
 Hava kirliliği, özellikle kış aylarında Türkiye şehirlerinde ciddi bir halk sağlığı sorunudur. Mevcut sistemler çoğunlukla *şu anki* durumu gösterir. HavaUyarı ise *yarın ne olacağını* tahmin ederek hassas grupların (astım hastaları, yaşlılar, çocuklar) önlem almasına yardımcı olmayı hedefler.
@@ -71,14 +72,13 @@ make data quality process
 make train
 
 make final         # final model ve açıklanabilirlik -> models/, reports/aciklanabilirlik_h24.md
-make test          # birim ve uçtan uca testler (121)
+make test          # birim ve uçtan uca testler (130)
 ```
 
 ## Tahmin API'si
 ```bash
 pip install -e ".[api]"
-make final   # model dosyasını üretir (Git'e eklenmez; yaklaşık 2 dakika sürer)
-make api     # http://127.0.0.1:8000/docs
+make api     # http://127.0.0.1:8000/docs (model dosyası repoda; yeniden üretmek için: make final)
 ```
 
 ```bash
@@ -121,6 +121,22 @@ make ui      # http://localhost:8501
 - **Model performansı:** Referans yöntemlerle hata karşılaştırması, uyarı dengesi, kalibrasyon ve özellik ailelerinin katkı payları.
 - Açık ve koyu tema, telefon ekranına uyumlu düzen, yükleme iskeleti ve azaltılmış hareket tercihi desteklenir. Metinler Türkçe yazım kurallarına, renk kontrastları erişilebilirlik ölçütlerine (WCAG AA) uygundur.
 
+## Docker
+Yerel Python kurulumu gerekmez; API ve pano aynı imajdan iki servis olarak çalışır:
+```bash
+docker compose up --build
+# API:  http://localhost:8000/docs
+# Pano: http://localhost:8501
+```
+İmaj her değişiklikte CI'da derlenir; API'nin modeli yüklediği ve panonun yanıt verdiği sağlık kontrolüyle doğrulanır.
+
+## Günlük Tahmin ve Canlı İzleme
+GitHub Actions her gün 08.17'de ([gunluk-tahmin.yml](.github/workflows/gunluk-tahmin.yml)) tüm istasyonlar için 24 saat sonrasının tahminini üretir ve [izleme/tahmin_kaydi.csv](izleme/tahmin_kaydi.csv) dosyasına ekler. Hedef saat geldiğinde her tahmin gerçekleşen ölçümle karşılaştırılır; son 14 günün canlı hatası [izleme/durum.json](izleme/durum.json) dosyasında tutulur ve panonun Model sekmesinde gösterilir.
+
+- **Sapma uyarısı:** Son 14 günde en az 40 tahmin değerlendirildiyse ve canlı ortalama hata geri testin (6,78 µg/m³) 1,5 katını aşıyorsa depoda `sapma` etiketli bir konu açılır.
+- **Veri kesintisi:** Ölçüm göndermeyen istasyon o gün atlanır; hiçbir istasyonda tahmin üretilemezse iş başarısız olur ve bildirim gelir.
+- Elle çalıştırma: `make daily` ya da Actions sayfasından "Run workflow".
+
 ## Proje Yapısı
 ```
 src/havauyari/
@@ -130,13 +146,16 @@ src/havauyari/
 ├─ evaluation/  # ileriye kayan pencereli geri test çerçevesi, metrikler, hata analizi
 ├─ alerts/      # AQI dönüşümü, uyarı eşikleri
 ├─ serving/     # canlı veri, tahmin akışı, FastAPI uygulaması
+├─ ops/         # günlük tahmin işi, tahmin kaydı, canlı izleme ve sapma kararı
 ├─ ui/          # Streamlit panosu ve tasarım sistemi
 └─ config.py
-models/         # model kartı, istasyon listesi, eşik ve aralık tabloları (model dosyası Git'e eklenmez)
+models/         # canlı model (LightGBM), model kartı, istasyon listesi, eşik ve aralık tabloları
+izleme/         # günlük tahmin kaydı ve canlı izleme durumu (GitHub Actions günceller)
 notebooks/      # keşifsel veri analizi (EDA)
 reports/        # kalite, geri test, hata analizi, deney ve açıklanabilirlik raporları
-docs/           # yol haritası
-tests/          # birim ve uçtan uca testler (sızıntı, geri test, API, pano)
+docs/           # yol haritası, tasarım felsefesi ve levha
+tests/          # birim ve uçtan uca testler (sızıntı, geri test, API, pano, günlük iş)
+Dockerfile, docker-compose.yml
 ```
 
 ## Sonuçlar
@@ -177,7 +196,8 @@ Ayrıntılı alt aşamalar ve alınan kararlar: [docs/YOL_HARITASI.md](docs/YOL_
 - [ ] Optuna ile hiperparametre araması (isteğe bağlı; zirve deneyi, sınırın parametrelerde değil bilgide olduğunu gösterdi)
 - [x] Tahmin API'si (FastAPI): `/forecast/{station}`, `/alerts`, `/stations`, `/health`
 - [x] Streamlit panosu: harita, tahmin grafiği ve %80'lik aralık, uyarı ve uyarı riski, "neden?" açıklaması, model performansı
-- [ ] Docker ve GitHub Actions ile günlük otomatik tahmin
+- [x] Docker (API + pano) ve CI'da imaj doğrulaması
+- [x] GitHub Actions ile günlük otomatik tahmin, canlı izleme ve sapma uyarısı
 - [ ] Hugging Face Spaces'te yayına alma
 
 ## Sınırlamalar

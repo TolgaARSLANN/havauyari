@@ -1,0 +1,38 @@
+# HavaUyarı: API ve pano (Faz 7.1)
+#
+#   docker compose up --build
+#   -> API:  http://localhost:8000/docs
+#   -> Pano: http://localhost:8501
+#
+# İki servis aynı imajı kullanır. Pano, tahmin servisini kendi sürecinde çalıştırır (API'ye
+# bağımlı değildir); böylece tek başına da yayına alınabilir (Faz 8).
+services:
+  api:
+    build: .
+    image: havauyari:latest
+    command: ["uvicorn", "havauyari.serving.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  ui:
+    image: havauyari:latest
+    depends_on:
+      - api            # yalnızca imaj bir kez derlensin diye; pano API'yi çağırmaz
+    command: ["streamlit", "run", "src/havauyari/ui/app.py",
+              "--server.address", "0.0.0.0", "--server.port", "8501"]
+    ports:
+      - "8501:8501"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped

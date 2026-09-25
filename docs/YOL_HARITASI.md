@@ -423,13 +423,40 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
     açıklama; tablo görünümü alternatif olarak korunuyor.
   - Duyarlılık: 1024 px ve 375 px'te sayfa düzeyinde yatay taşma yok (ölçüldü); başlık yükleme
     sırasında hemen görünüyor.
+- [x] **6.7 Tasarım dili "Parçacık Defteri"** (6.6'nın yerini aldı) — felsefe ve levha:
+  `docs/tasarim/`. Kâğıt/mürekkep paleti, Instrument Serif + Instrument Sans + IBM Plex Mono,
+  kutu yerine ince çizgiler; PM2.5 nokta yoğunluğuyla gösterilir (istasyonlar tek ölçekte
+  parçacık bantları, saatlik tahmin nokta sütunları); köz kırmızısı yalnızca resmî eşik ve uyarı.
+  - Harita: WebGL karo haritası yerine SVG atlas (Scattergeo): değerler serif rakamla yazılır,
+    yakın istasyonlar (İstanbul, Bursa, Ankara ikilileri) ayrılıp gerçek konuma çizgiyle bağlanır.
+  - Gezinme: kart düğmesi detay sekmesini açar; seçili istasyon adreste (`?istasyon=...`).
+  - İstasyonlar paralel çekilir (SİM istek aralığı kilitle korunur), yükleme iskeleti.
+  - Sayfa dili `tr`; büyük harfli etiketlerde µ birimi korunur (aksi hâlde "MG/M³" olur).
 
 ## FAZ 7: MLOps ve Otomasyon · ~3-4 gün
 
-- [ ] **7.1 Docker**: `Dockerfile` + `docker-compose.yml` (api + app)
-- [ ] **7.2 CI genişletme**: testler + lint + Docker build
-- [ ] **7.3 Günlük tahmin işi**: GitHub Actions cron → veri çek, tahmin üret, sonuçları kaydet
-- [ ] **7.4 İzleme**: tahmin ve gerçekleşen değerlerin kaydı, hata artarsa uyarı (drift sinyali)
+- [x] **7.1 Docker**: `Dockerfile` + `docker-compose.yml` (api + app)
+  - Tek imaj, iki servis (`uvicorn` 8000, `streamlit` 8501); pano tahmin servisini kendi
+    sürecinde çalıştırır. Paket düzenlenebilir kipte kurulur (`config.ROOT` dosya konumundan
+    hesaplanıyor), `libgomp1` (LightGBM), root olmayan kullanıcı, sağlık kontrolleri.
+  - Karar: canlı model (`models/lgbm_station_h24.txt`, 2,8 MB, metin) artık repoda; imaj,
+    günlük iş ve yayın ek indirme adımı olmadan çalışır.
+  - Yerelde Docker kurulu değil: imaj yalnızca CI'da derlenip doğrulanıyor.
+- [x] **7.2 CI genişletme**: testler + lint + Docker build
+  - `docker` işi: imaj derlenir (GitHub Actions önbelleğiyle), API `/health` model yüklü
+    olmalı, pano `/_stcore/health` yanıt vermeli; hata olursa konteyner günlükleri basılır.
+- [x] **7.3 Günlük tahmin işi**: GitHub Actions cron → veri çek, tahmin üret, sonuçları kaydet
+  - `.github/workflows/gunluk-tahmin.yml` (her gün 08.17 TSİ + elle tetikleme),
+    `python -m havauyari.ops.daily`. Sonuçlar `izleme/tahmin_kaydi.csv` ve `izleme/durum.json`
+    dosyalarına yazılıp depoya işlenir; özet Actions sayfasında. Hiçbir istasyonda tahmin
+    üretilemezse iş başarısız olur (veri kaynağı sorunu).
+  - İlk canlı çalıştırma (yerelde, 25 Eylül 19.00): 8 istasyonun 7'si; Ümraniye son 3 saatte
+    ölçüm vermediği için atlandı (tasarlandığı gibi).
+- [x] **7.4 İzleme**: tahmin ve gerçekleşen değerlerin kaydı, hata artarsa uyarı (drift sinyali)
+  - Hedef saati geçen tahminler son 72 saatlik ölçümle eşleştirilir (ölçüm gecikirse sonraki
+    günlerde yeniden denenir). Son 14 günde ≥ 40 değerlendirilmiş tahmin varsa ve canlı MAE
+    geri testin 1,5 katını aşarsa "sapma" işaretlenir ve `sapma` etiketli konu açılır (açık
+    konu varsa yorum eklenir). Panoda Model sekmesinde "Canlı izleme" bölümü.
 - [ ] **7.5 (Opsiyonel) Haftalık yeniden eğitim**
 
 ## FAZ 8: Yayın ve Portföy · ~2-3 gün

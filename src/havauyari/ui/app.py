@@ -21,6 +21,7 @@ import pandas as pd
 import streamlit as st
 
 from havauyari.config import ROOT
+from havauyari.ops.daily import LOG_PATH, STATUS_PATH, load_log
 from havauyari.serving.service import DataUnavailable
 from havauyari.ui import state
 from havauyari.ui.components import (
@@ -40,6 +41,7 @@ from havauyari.ui.components import (
     hourly_strip_html,
     kpi_html,
     legend_html,
+    live_monitor_html,
     mae_bars_html,
     map_figure,
     pipeline_html,
@@ -387,6 +389,14 @@ with tab_model:
          + kpi_html("Aralık kapsaması", tr_pct(bt.get("interval_80_coverage", 0), 1),
                     "Ölçümlerin %80'lik aralıkta kalma oranı", "eye")
          + "</div>")
+
+    section("Canlı izleme", "Günlük tahmin işi her sabah tüm istasyonlar için tahmin üretir; "
+                            "ertesi gün her tahmin gerçekleşen ölçümle karşılaştırılır. Canlı "
+                            "hata geri testin 1,5 katını aşarsa sapma işaretlenir.",
+            fig="İzleme")
+    live_status = (json.loads(STATUS_PATH.read_text(encoding="utf-8"))
+                   if STATUS_PATH.exists() else None)
+    html(live_monitor_html(load_log(LOG_PATH), live_status, T))
 
     curves = load_json("perf_curves.json")
     if curves:

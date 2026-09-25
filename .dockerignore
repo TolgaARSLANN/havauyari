@@ -1,0 +1,23 @@
+# İmaja yalnızca çalışma için gerekenler girer: src, models, reports/*.json, izleme, .streamlit
+.git
+.github
+.venv
+venv
+**/__pycache__
+**/*.py[cod]
+**/*.egg-info
+.pytest_cache
+.ruff_cache
+.ipynb_checkpoints
+data
+notebooks
+tests
+docs
+Makefile
+docker-compose.yml
+Dockerfile
+.env
+
+# Raporlardan yalnızca panonun okuduğu JSON dosyaları
+reports/*
+!reports/*.json

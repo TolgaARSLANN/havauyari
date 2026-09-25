@@ -11,4 +11,7 @@ data/raw/
 data/processed/
 models/*.pkl
 models/*.txt
+# Canlı model repoda tutulur (2,8 MB, metin): Docker imajı, günlük tahmin işi ve yayın
+# ek bir indirme adımı olmadan çalışır (Faz 7)
+!models/lgbm_station_h24.txt
 .env

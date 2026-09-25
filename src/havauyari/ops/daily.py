@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
+import requests
 
 from havauyari.config import ROOT
 from havauyari.serving.service import DataUnavailable, ForecastService
@@ -120,11 +121,19 @@ def monitor(log: pd.DataFrame, now: datetime, backtest_mae: float,
 def run(service: ForecastService, log_path: Path = LOG_PATH,
         status_path: Path = STATUS_PATH) -> dict:
     forecasts, errors = {}, {}
-    for slug in service.a.stations:
+    slugs = list(service.a.stations)
+    for i, slug in enumerate(slugs):
         try:
             forecasts[slug] = service.forecast(slug)
         except DataUnavailable as e:
             errors[slug] = str(e)
+        except (requests.ConnectionError, requests.Timeout) as e:
+            # Kaynağa hiç bağlanılamıyor: kalan istasyonlar için ayrı ayrı zaman aşımı beklenmez
+            msg = f"Veri kaynağına bağlanılamadı ({type(e).__name__}: {_host(e)})"
+            errors.update({s: msg for s in slugs[i:]})
+            break
+        except requests.RequestException as e:
+            errors[slug] = f"Veri kaynağı hatası ({type(e).__name__})"
 
     log = append(load_log(log_path), forecast_rows(forecasts))
     log = fill_actuals(log, {s: f["history"] for s, f in forecasts.items()})
@@ -148,6 +157,11 @@ def run(service: ForecastService, log_path: Path = LOG_PATH,
     status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2) + "\n",
                            encoding="utf-8")
     return status
+
+
+def _host(e: requests.RequestException) -> str:
+    url = getattr(getattr(e, "request", None), "url", None) or ""
+    return url.split("/")[2] if url.count("/") >= 2 else "bilinmeyen adres"
 
 
 def summary_markdown(status: dict) -> str:

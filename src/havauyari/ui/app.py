@@ -18,6 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 import pandas as pd
+import requests
 import streamlit as st
 
 from havauyari.config import ROOT
@@ -93,6 +94,10 @@ def load_forecasts(service) -> tuple[dict, dict]:
             return slug, service.forecast(slug), None
         except DataUnavailable as e:
             return slug, None, str(e)
+        except requests.RequestException as e:           # ağ kesintisi: sayfa çökmesin
+            name = service.a.stations[slug]["name"]
+            return slug, None, (f"{name}: veri kaynağına şu anda ulaşılamıyor "
+                                f"({type(e).__name__}); tahmin daha sonra yenilenecek.")
 
     ok, errors = {}, {}
     with ThreadPoolExecutor(max_workers=8) as pool:

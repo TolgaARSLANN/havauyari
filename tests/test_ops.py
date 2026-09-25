@@ -56,6 +56,25 @@ def test_failed_station_is_reported_not_logged(models_dir, tmp_path):
     assert "⚠ s1" in summary_markdown(status)
 
 
+def test_unreachable_source_fails_fast(models_dir, tmp_path):
+    """Kaynağa bağlanılamıyorsa (örn. yurt dışı IP engeli) iş çökmez, her istasyon için ayrı
+    zaman aşımı beklemez; tüm istasyonlar başarısız raporlanır."""
+    import requests
+
+    class Unreachable:
+        calls = 0
+
+        def station_frame(self, station, now):
+            Unreachable.calls += 1
+            raise requests.ConnectTimeout("zaman aşımı")
+
+    status = run(_service(models_dir, {"now": NOW}, Unreachable()),
+                 tmp_path / "k.csv", tmp_path / "d.json")
+    assert Unreachable.calls == 1
+    assert status["stations_ok"] == [] and set(status["stations_failed"]) == {"s1", "s2"}
+    assert "bağlanılamadı" in status["stations_failed"]["s2"]
+
+
 def _log(errors, days_ago=1):
     t = pd.Timestamp(NOW) - timedelta(days=days_ago)
     rows = [{"issued_at": t - timedelta(hours=24 + i), "target_time": t - timedelta(hours=i),

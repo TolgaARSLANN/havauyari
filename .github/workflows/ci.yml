@@ -18,6 +18,19 @@ jobs:
       - run: ruff check src tests
       - run: pytest -q
 
+  # Günlük iş yalnızca çekirdek bağımlılıklarla çalışır: geliştirme paketlerine (matplotlib vb.)
+  # sızan bir içe aktarma, testlerde görünmez ama işi açılışta çökertir
+  minimal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e .
+      - run: python -c "import havauyari.ops.daily"
+
   # Faz 7.2: imaj derlenir, API ve pano konteynerde başlatılıp sağlık kontrolünden geçer
   docker:
     runs-on: ubuntu-latest

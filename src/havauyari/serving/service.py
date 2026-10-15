@@ -2,15 +2,23 @@
 
 Bir istasyon için çıktı: 24 saat sonrası PM2.5 tahmini, %80'lik aralık, AQI kategorisi, istasyon
 eşiğine göre uyarı kararı, "uyarı riski" bayrağı ve tahminin açıklaması (özellik katkıları).
+
+Kalıcılık (isteğe bağlı): servis bir `repository` ile kurulursa tahminler ve uyarılar
+PostgreSQL'e yazılır ve oradan okunur. Okuma sırası: bellekteki saatlik önbellek -> veritabanı
+(aynı tahmin saati, hedef saat ve model sürümü) -> yeniden hesaplama + upsert. Veritabanına
+ulaşılamazsa tahmin yine hesaplanıp döner; yalnızca yazma/okuma atlanır.
 """
 
 from __future__ import annotations
 
 import json
+import logging
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Protocol
 from zoneinfo import ZoneInfo
 
 import lightgbm as lgb
@@ -25,6 +33,9 @@ from havauyari.features.build import FEATURE_FFILL_HOURS, STATION_TARGET, build_
 from havauyari.models.final import explain_row, family_of
 from havauyari.models.intervals import apply_intervals
 from havauyari.serving.data import DataProvider
+from havauyari.storage import StorageError, database_url
+
+log = logging.getLogger(__name__)
 
 HORIZON = 24
 OFFICIAL_ALERT = 35.5
@@ -33,6 +44,25 @@ STATION_COLS = ["station_pm25", "station_pm10"]
 
 class DataUnavailable(RuntimeError):
     """Tahmin için gerekli güncel veri yok (örn. istasyon son saatlerde ölçüm yapmamış)."""
+
+
+class Repository(Protocol):
+    """Kalıcılık arayüzü (gerçeği: storage.repository.ForecastRepository)."""
+
+    def ping(self) -> None: ...
+    def sync_stations(self, stations) -> None: ...
+    def get_forecast(self, station: str, issued_at: datetime, target_time: datetime,
+                     model_version: str) -> dict | None: ...
+    def save_forecast(self, result: dict, model_version: str) -> None: ...
+
+
+def default_repository() -> Repository | None:
+    """DATABASE_URL tanımlıysa PostgreSQL deposu; değilse None (SQLAlchemy yüklenmez)."""
+    if database_url() is None:
+        return None
+    from havauyari.storage.repository import repository_from_env
+
+    return repository_from_env()
 
 
 @dataclass
@@ -85,11 +115,15 @@ def prepare_frame(raw: pd.DataFrame) -> pd.DataFrame:
 
 class ForecastService:
     def __init__(self, artifacts: Artifacts, provider: DataProvider,
-                 clock: Callable[[], datetime] = local_now):
+                 clock: Callable[[], datetime] = local_now, repository: Repository | None = None):
         self.a = artifacts
         self.provider = provider
         self.clock = clock
+        self.repo = repository
+        self.model_version = f"{artifacts.card['model']}@{artifacts.card['created']}"
         self._cache: dict[tuple[str, datetime], dict] = {}
+        self._stations_synced = False
+        self._sync_lock = threading.Lock()
 
     # --- istasyonlar ---------------------------------------------------------------------
     def stations(self) -> list[dict]:
@@ -104,10 +138,37 @@ class ForecastService:
         key = (slug, now)
         if key in self._cache:                      # Faz 5.4: aynı saat içinde tekrar çekme
             return self._cache[key]
-        result = self._forecast(self.a.stations[slug], now)
+        result = self._load(slug, now)
+        if result is None:
+            result = self._forecast(self.a.stations[slug], now)
+            self._store(result)
         self._cache = {k: v for k, v in self._cache.items() if k[1] == now}  # eski saatleri at
         self._cache[key] = result
         return result
+
+    # --- kalıcılık ------------------------------------------------------------------------
+    def _load(self, slug: str, now: datetime) -> dict | None:
+        """Veritabanında bu saatte, bu modelle verilmiş tahmin varsa onu döner."""
+        if self.repo is None:
+            return None
+        try:
+            return self.repo.get_forecast(slug, now, now + timedelta(hours=HORIZON),
+                                          self.model_version)
+        except StorageError as e:
+            log.warning("Tahmin veritabanından okunamadı (%s): %s", slug, e)
+            return None
+
+    def _store(self, result: dict) -> None:
+        if self.repo is None:
+            return
+        try:
+            with self._sync_lock:                   # yabancı anahtar: önce istasyon kaydı
+                if not self._stations_synced:
+                    self.repo.sync_stations(self.a.stations.values())
+                    self._stations_synced = True
+            self.repo.save_forecast(result, self.model_version)
+        except StorageError as e:
+            log.warning("Tahmin veritabanına yazılamadı (%s): %s", result["station"], e)
 
     def _features(self, station: dict, feats: pd.DataFrame) -> pd.DataFrame:
         out = feats.copy()

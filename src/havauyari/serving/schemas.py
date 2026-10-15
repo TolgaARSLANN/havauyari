@@ -102,3 +102,6 @@ class Health(BaseModel):
     model_created: str | None = None
     stations: int = 0
     detail: str | None = None
+    database: str = Field("yapılandırılmadı",
+                          description="Veritabanı bağlantısı: 'ok', 'yapılandırılmadı' "
+                                      "(DATABASE_URL yok) ya da 'hata: ...'")

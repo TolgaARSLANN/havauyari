@@ -8,12 +8,43 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      # DB entegrasyon testleri (tests/test_storage.py) bu konteyneri kullanır
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: havauyari
+          POSTGRES_PASSWORD: havauyari
+          POSTGRES_DB: havauyari_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U havauyari -d havauyari_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://havauyari:havauyari@localhost:5432/havauyari_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -e ".[dev,api,ui]"
+      - run: pip install -e ".[dev,api,ui,db]"
       - run: ruff check src tests
-      - run: pytest -q
+      # DB testleri atlanmış olmasın: CI'da postgres her zaman var
+      - run: |
+          pytest -q -rs | tee pytest.txt
+          ! grep -q "TEST_DATABASE_URL tanımlı değil" pytest.txt
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: İmajı derle
+        run: docker build -t havauyari-api .
+      - name: İmaj içinde servis modülleri yüklenebiliyor (matplotlib yok, root olmayan kullanıcı)
+        run: |
+          docker run --rm --entrypoint python havauyari-api -c \
+            "import havauyari.serving.app, havauyari.storage.migrate; import os; assert os.getuid() != 0; print('ok')"

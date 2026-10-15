@@ -1,9 +1,11 @@
 """Proje genelinde kullanılan sabitler ve yollar."""
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+# Depo kökü. Paket site-packages'a kurulduğunda (Docker imajı) HAVAUYARI_ROOT ile verilir.
+ROOT = Path(os.environ.get("HAVAUYARI_ROOT") or Path(__file__).resolve().parents[2])
 DATA_DIR = ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"

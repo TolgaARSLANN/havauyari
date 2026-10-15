@@ -30,7 +30,7 @@ jobs:
     env:
       TEST_DATABASE_URL: postgresql://havauyari:havauyari@localhost:5432/havauyari_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -45,7 +45,7 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: İmajı derle
         run: docker build -t havauyari-api .
       - name: İmaj içinde servis modülleri yüklenebiliyor (matplotlib yok, root olmayan kullanıcı)

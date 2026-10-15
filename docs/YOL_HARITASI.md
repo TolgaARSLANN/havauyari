@@ -426,8 +426,8 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
 
 ## FAZ 7: MLOps ve Otomasyon · ~3-4 gün
 
-- [ ] **7.1 Docker**: `Dockerfile` + `docker-compose.yml` (api + app)
-- [ ] **7.2 CI genişletme**: testler + lint + Docker build
+- [x] **7.1 Docker**: `Dockerfile` + `docker-compose.yml` (api + PostgreSQL). Tahminler ve uyarılar veritabanında saklanır (SQLAlchemy 2 + Alembic); migration'lar konteyner açılışında çalışır. Pano henüz compose'a eklenmedi.
+- [x] **7.2 CI genişletme**: testler + lint + Docker build; DB entegrasyon testleri postgres servis konteyneriyle
 - [ ] **7.3 Günlük tahmin işi**: GitHub Actions cron → veri çek, tahmin üret, sonuçları kaydet
 - [ ] **7.4 İzleme**: tahmin ve gerçekleşen değerlerin kaydı, hata artarsa uyarı (drift sinyali)
 - [ ] **7.5 (Opsiyonel) Haftalık yeniden eğitim**

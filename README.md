@@ -71,7 +71,8 @@ make data quality process
 make train
 
 make final         # final model ve açıklanabilirlik -> models/, reports/aciklanabilirlik_h24.md
-make test          # birim ve uçtan uca testler (121)
+make test          # birim ve uçtan uca testler (127; DB testleri TEST_DATABASE_URL yoksa atlanır)
+make test-db       # PostgreSQL entegrasyon testleri dahil tüm paket (141)
 ```
 
 ## Tahmin API'si
@@ -105,7 +106,41 @@ curl http://127.0.0.1:8000/forecast/izmir_konak
   }
 }
 ```
-Uç noktalar: `/health`, `/stations`, `/forecast/{station}`, `/alerts?only_alerts=true`. Aynı saat içinde tekrarlanan istekler önbellekten yanıtlanır.
+Uç noktalar: `/health`, `/stations`, `/forecast/{station}`, `/alerts?only_alerts=true`. Aynı saat içinde tekrarlanan istekler önbellekten yanıtlanır. `DATABASE_URL` tanımlıysa tahminler PostgreSQL'e de yazılır (aşağıya bakın).
+
+## Docker ve Veritabanı
+API ve PostgreSQL, Docker Compose ile tek komutla çalışır. Tahminler ve uyarılar veritabanında saklanır; API yeniden başlasa da aynı saatin tahmini yeniden hesaplanmadan veritabanından okunur.
+
+```
+                 ┌──────────── docker compose ─────────────┐
+ istemci ──HTTP──▶ api (FastAPI, uvicorn)                  │
+ (curl, pano)    │   1. bellek önbelleği (aynı saat)       │
+                 │   2. PostgreSQL ──────────▶ postgres:16  │  volume: pgdata
+                 │   3. canlı veri + LightGBM + upsert     │
+                 └───────┬─────────────────────────────────┘
+                         ▼ yalnızca 3. adımda
+             SİM (istasyon ölçümleri), Open-Meteo (CAMS, meteoroloji, hava tahmini)
+```
+
+```bash
+make final            # model dosyası (Git'e eklenmez); compose models/ klasörünü salt okunur bağlar
+cp .env.example .env  # isteğe bağlı: kullanıcı, parola, portlar
+make compose-up       # = docker compose up -d --build; API, postgres sağlıklı olunca başlar
+curl http://localhost:8000/health        # "database": "ok"
+curl http://localhost:8000/forecast/izmir_konak
+curl http://localhost:8000/alerts
+make compose-down     # durdur (veriler pgdata volume'unda kalır)
+```
+
+- **Şema** (`src/havauyari/storage/`, Alembic migration'ları konteyner açılışında çalışır):
+  - `stations`: istasyon kaydı (`models/stations.json` ile eşitlenir).
+  - `forecasts`: istasyon, tahmin saati, hedef saat, tahmin, %80'lik aralığın alt ve üst sınırı, model sürümü, oluşturulma zamanı ve yanıtın tamamı (JSONB). Aynı istasyon ve hedef saat için tek satır tutulur (upsert).
+  - `alerts`: uyarı ya da uyarı riski görülen istasyon ve hedef saatler. Uyarı kalkınca satır silinmez; `is_alert` ve `risk` false olur, `updated_at` güncellenir.
+- **Zaman:** Tüm zaman alanları `TIMESTAMPTZ` (UTC) olarak saklanır; API yanıtında önceden olduğu gibi Türkiye saatiyle döner.
+- **Okuma kuralı:** Veritabanındaki kayıt yalnızca aynı tahmin saatinde, aynı hedef saat için ve aynı model sürümüyle üretilmişse kullanılır; değilse tahmin yeniden hesaplanıp üzerine yazılır.
+- **Dayanıklılık:** Veritabanına ulaşılamazsa tahmin yine hesaplanıp döner; `/health` yanıtındaki `database` alanı sorunu gösterir.
+- **İmaj:** `python:3.11-slim`, root olmayan kullanıcı, `/health` üzerinden `HEALTHCHECK`.
+- **Veritabanı olmadan:** `DATABASE_URL` tanımlı değilse API ve pano eskisi gibi yalnızca bellek önbelleğiyle çalışır.
 
 ## Pano
 ```bash
@@ -130,13 +165,16 @@ src/havauyari/
 ├─ evaluation/  # ileriye kayan pencereli geri test çerçevesi, metrikler, hata analizi
 ├─ alerts/      # AQI dönüşümü, uyarı eşikleri
 ├─ serving/     # canlı veri, tahmin akışı, FastAPI uygulaması
+├─ storage/     # PostgreSQL şeması (SQLAlchemy), Alembic migration'ları, tahmin deposu
 ├─ ui/          # Streamlit panosu ve tasarım sistemi
 └─ config.py
 models/         # model kartı, istasyon listesi, eşik ve aralık tabloları (model dosyası Git'e eklenmez)
 notebooks/      # keşifsel veri analizi (EDA)
 reports/        # kalite, geri test, hata analizi, deney ve açıklanabilirlik raporları
 docs/           # yol haritası
-tests/          # birim ve uçtan uca testler (sızıntı, geri test, API, pano)
+tests/          # birim ve uçtan uca testler (sızıntı, geri test, API, pano, veritabanı)
+docker/         # konteyner açılış betiği (migration + uvicorn)
+Dockerfile, docker-compose.yml, alembic.ini, .env.example
 ```
 
 ## Sonuçlar
@@ -177,7 +215,8 @@ Ayrıntılı alt aşamalar ve alınan kararlar: [docs/YOL_HARITASI.md](docs/YOL_
 - [ ] Optuna ile hiperparametre araması (isteğe bağlı; zirve deneyi, sınırın parametrelerde değil bilgide olduğunu gösterdi)
 - [x] Tahmin API'si (FastAPI): `/forecast/{station}`, `/alerts`, `/stations`, `/health`
 - [x] Streamlit panosu: harita, tahmin grafiği ve %80'lik aralık, uyarı ve uyarı riski, "neden?" açıklaması, model performansı
-- [ ] Docker ve GitHub Actions ile günlük otomatik tahmin
+- [x] Docker: API + PostgreSQL (docker compose), tahmin ve uyarı kalıcılığı, Alembic migration'ları
+- [ ] GitHub Actions ile günlük otomatik tahmin
 - [ ] Hugging Face Spaces'te yayına alma
 
 ## Sınırlamalar

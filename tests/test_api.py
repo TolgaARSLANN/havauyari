@@ -20,6 +20,7 @@ def client(service):
 def test_health_and_stations(client):
     h = client.get("/health").json()
     assert h["status"] == "ok" and h["model_loaded"] and h["stations"] == 2
+    assert h["database"] == "yapılandırılmadı"                  # DATABASE_URL yok
     st = client.get("/stations").json()
     assert {s["slug"] for s in st} == {"s1", "s2"}
     assert {s["slug"]: s["decision_threshold"] for s in st} == {"s1": 0.0, "s2": 1000.0}
@@ -118,3 +119,17 @@ def test_serving_imports_without_matplotlib():
     code = ("import sys; sys.modules['matplotlib'] = None; "
             "import havauyari.serving.app, havauyari.serving.service")
     subprocess.run([sys.executable, "-c", code], check=True)
+
+
+def test_unreachable_database_does_not_break_forecast(models_dir):
+    """Veritabanı kapalıysa tahmin yine hesaplanır; /health sorunu gösterir."""
+    from havauyari.storage.repository import ForecastRepository
+
+    repo = ForecastRepository.from_url("postgresql://x:y@127.0.0.1:1/yok?connect_timeout=2")
+    svc = ForecastService(load_artifacts(models_dir), FakeProvider(), clock=lambda: NOW,
+                          repository=repo)
+    client = TestClient(create_app(svc))
+    r = client.get("/forecast/s1")
+    assert r.status_code == 200 and r.json()["station"] == "s1"
+    h = client.get("/health").json()
+    assert h["status"] == "ok" and h["database"].startswith("hata: OperationalError")

@@ -132,4 +132,5 @@ def test_unreachable_database_does_not_break_forecast(models_dir):
     r = client.get("/forecast/s1")
     assert r.status_code == 200 and r.json()["station"] == "s1"
     h = client.get("/health").json()
-    assert h["status"] == "ok" and h["database"].startswith("hata: OperationalError")
+    assert h["status"] == "ok" and h["database"] == "hata"
+    assert "127.0.0.1" not in str(h) and "Error" not in str(h)   # altyapı ayrıntısı sızmaz

@@ -140,6 +140,7 @@ make compose-down     # durdur (veriler pgdata volume'unda kalır)
 - **Okuma kuralı:** Veritabanındaki kayıt yalnızca aynı tahmin saatinde, aynı hedef saat için ve aynı model sürümüyle üretilmişse kullanılır; değilse tahmin yeniden hesaplanıp üzerine yazılır.
 - **Dayanıklılık:** Veritabanına ulaşılamazsa tahmin yine hesaplanıp döner; `/health` yanıtındaki `database` alanı sorunu gösterir.
 - **İmaj:** `python:3.11-slim`, root olmayan kullanıcı, `/health` üzerinden `HEALTHCHECK`.
+- **Güvenlik:** Compose portları yalnızca bu bilgisayara (`127.0.0.1`) açar. `.env.example`'daki parola yalnızca yerel kullanım içindir; başka bir makinede çalıştırırken `.env` dosyasında güçlü bir parola belirleyin. `/health` veritabanı hatasının ayrıntısını yanıtta değil sunucu loglarında gösterir.
 - **Veritabanı olmadan:** `DATABASE_URL` tanımlı değilse API ve pano eskisi gibi yalnızca bellek önbelleğiyle çalışır.
 
 ## Pano

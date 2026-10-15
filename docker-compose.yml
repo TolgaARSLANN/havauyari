@@ -1,0 +1,42 @@
+# HavaUyarı: API + PostgreSQL
+#   cp .env.example .env      # isteğe bağlı; değerlerin varsayılanları aşağıda
+#   docker compose up -d --build
+#   curl http://localhost:8000/health
+#
+# Model dosyası git dışıdır: önce `python -m havauyari.models.final` ile models/ altında
+# üretilmiş olmalı. models/ klasörü konteynere salt okunur bağlanır.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-havauyari}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-havauyari}
+      POSTGRES_DB: ${POSTGRES_DB:-havauyari}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: .
+    image: havauyari-api
+    depends_on:
+      postgres:
+        condition: service_healthy     # API, veritabanı bağlantı kabul edince başlar
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-havauyari}:${POSTGRES_PASSWORD:-havauyari}@postgres:5432/${POSTGRES_DB:-havauyari}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./models:/app/models:ro
+    restart: unless-stopped
+
+volumes:
+  pgdata:

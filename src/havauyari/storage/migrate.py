@@ -34,5 +34,9 @@ def downgrade(url: str | None = None, revision: str = "base") -> None:
 
 
 if __name__ == "__main__":
+    import logging
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s [%(name)s] %(message)s")
+    logging.getLogger("sqlalchemy").setLevel(logging.WARNING)
     upgrade()
     print("Veritabanı şeması güncel (alembic head).")

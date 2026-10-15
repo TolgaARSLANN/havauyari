@@ -4,6 +4,8 @@ stations   istasyon kaydı (models/stations.json ile her açılışta eşitlenir
 forecasts  her (istasyon, hedef saat) için tek tahmin; yeniden hesaplanırsa üzerine yazılır
 alerts     uyarı ya da uyarı riski görülen (istasyon, hedef saat) çiftleri; uyarı kalkınca
            satır silinmez, is_alert/risk false olur ve updated_at güncellenir (geçmiş korunur)
+measurements  istasyonda gerçekleşen saatlik PM2.5 ölçümleri (canlı performans: tahmin - ölçüm)
+runs       zamanlanmış toplama işinin (jobs.collect) her çalışmasının özeti
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Integer,
     String,
     UniqueConstraint,
     func,
@@ -76,3 +79,25 @@ class AlertRow(Base):
     risk: Mapped[bool] = mapped_column(Boolean)
     created_at: Mapped[datetime] = mapped_column(TZ, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(TZ, server_default=func.now())
+
+
+class MeasurementRow(Base):
+    __tablename__ = "measurements"
+
+    station: Mapped[str] = mapped_column(ForeignKey("stations.slug"), primary_key=True)
+    time: Mapped[datetime] = mapped_column(TZ, primary_key=True)
+    pm25: Mapped[float] = mapped_column(Float)
+    updated_at: Mapped[datetime] = mapped_column(TZ, server_default=func.now())
+
+
+class RunRow(Base):
+    __tablename__ = "runs"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    started_at: Mapped[datetime] = mapped_column(TZ)
+    finished_at: Mapped[datetime] = mapped_column(TZ)
+    issued_at: Mapped[datetime] = mapped_column(TZ)          # tahminlerin verildiği saat
+    ok: Mapped[int] = mapped_column(Integer)
+    failed: Mapped[int] = mapped_column(Integer)
+    measurements: Mapped[int] = mapped_column(Integer)
+    errors: Mapped[dict] = mapped_column(JSONB)              # {istasyon: hata metni}

@@ -1,6 +1,6 @@
 .PHONY: install data quality process train baselines test lint \
         sim-survey sim-data forecasts stations train-station final api ui \
-        db-up db-down migrate test-db compose-up compose-down
+        db-up db-down migrate test-db compose-up compose-down collect
 
 # Yerel PostgreSQL (docker compose'daki postgres servisi). Değerler .env.example ile aynı.
 DATABASE_URL ?= postgresql://havauyari:havauyari@localhost:5432/havauyari
@@ -52,6 +52,9 @@ compose-up:       ## api + postgres (migration'lar api açılışında çalış�
 
 compose-down:
 	docker compose down
+
+collect: db-up    ## tüm istasyonların bu saatki tahmini + ölçümleri DB'ye (zamanlanmış iş)
+	DATABASE_URL=$(DATABASE_URL) python -m havauyari.jobs.collect
 
 data:
 	python -m havauyari.data.fetch_openmeteo

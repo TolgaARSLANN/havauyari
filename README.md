@@ -71,8 +71,8 @@ make data quality process
 make train
 
 make final         # final model ve açıklanabilirlik -> models/, reports/aciklanabilirlik_h24.md
-make test          # birim ve uçtan uca testler (127; DB testleri TEST_DATABASE_URL yoksa atlanır)
-make test-db       # PostgreSQL entegrasyon testleri dahil tüm paket (141)
+make test          # birim ve uçtan uca testler (133; DB testleri TEST_DATABASE_URL yoksa atlanır)
+make test-db       # PostgreSQL entegrasyon testleri dahil tüm paket (152)
 ```
 
 ## Tahmin API'si
@@ -141,7 +141,24 @@ make compose-down     # durdur (veriler pgdata volume'unda kalır)
 - **Dayanıklılık:** Veritabanına ulaşılamazsa tahmin yine hesaplanıp döner; `/health` yanıtındaki `database` alanı sorunu gösterir.
 - **İmaj:** `python:3.11-slim`, root olmayan kullanıcı, `/health` üzerinden `HEALTHCHECK`.
 - **Güvenlik:** Compose portları yalnızca bu bilgisayara (`127.0.0.1`) açar. `.env.example`'daki parola yalnızca yerel kullanım içindir; başka bir makinede çalıştırırken `.env` dosyasında güçlü bir parola belirleyin. `/health` veritabanı hatasının ayrıntısını yanıtta değil sunucu loglarında gösterir.
+- **Saatlik toplama:** `make collect` (ya da zamanlanmış görev) tüm istasyonların o saatki tahminini, uyarı durumunu ve son 72 saatin ölçümlerini kaydeder; çalışmanın özeti `runs` tablosuna yazılır. Ayrıntılar aşağıda.
 - **Veritabanı olmadan:** `DATABASE_URL` tanımlı değilse API ve pano eskisi gibi yalnızca bellek önbelleğiyle çalışır.
+
+## Saatlik Otomatik Toplama
+Tahminler ve gerçekleşen ölçümler her saat veritabanına kaydedilir; birkaç hafta sonra modelin canlıdaki gerçek hatası (tahmin − ölçüm) hesaplanabilir. SİM yalnızca Türkiye'den erişilebildiği için iş GitHub Actions'ta değil, yerel bilgisayarda Windows Görev Zamanlayıcı ile çalışır.
+
+```bash
+make collect                     # tek seferlik, çıktı terminalde
+scripts/collect.sh               # zamanlayıcının çağırdığı betik; çıktı logs/collect.log
+```
+```powershell
+# Windows'ta, depo klasöründe (\\wsl.localhost\Ubuntu-24.04\home\<kullanıcı>\projects\havauyari):
+powershell -ExecutionPolicy Bypass -File scripts\windows\register_collect_task.ps1           # kaydet
+powershell -ExecutionPolicy Bypass -File scripts\windows\register_collect_task.ps1 -Remove   # kaldır
+```
+- Görev her saatin 10. dakikasında, pencere açmadan çalışır; bilgisayar uykudaysa uyanınca kaçırılan çalışmayı bir kez yapar. Docker Desktop kapalıysa iş çalışmaz ve bunu loga yazar.
+- Her istasyon ayrı ele alınır: ölçümü olmayan ya da ağ hatası veren istasyon atlanır, diğerleri kaydedilir. Aynı saat içinde yeniden çalışırsa tahminler yeniden hesaplanmaz, ölçümler üzerine yazılır.
+- Tablolar: `measurements` (istasyon, saat, PM2.5) ve `runs` (başlangıç/bitiş, başarılı/başarısız istasyon sayısı, hatalar).
 
 ## Pano
 ```bash
@@ -167,6 +184,7 @@ src/havauyari/
 ├─ alerts/      # AQI dönüşümü, uyarı eşikleri
 ├─ serving/     # canlı veri, tahmin akışı, FastAPI uygulaması
 ├─ storage/     # PostgreSQL şeması (SQLAlchemy), Alembic migration'ları, tahmin deposu
+├─ jobs/        # zamanlanmış işler: saatlik tahmin ve ölçüm toplama
 ├─ ui/          # Streamlit panosu ve tasarım sistemi
 └─ config.py
 models/         # model kartı, istasyon listesi, eşik ve aralık tabloları (model dosyası Git'e eklenmez)
@@ -175,6 +193,7 @@ reports/        # kalite, geri test, hata analizi, deney ve açıklanabilirlik r
 docs/           # yol haritası
 tests/          # birim ve uçtan uca testler (sızıntı, geri test, API, pano, veritabanı)
 docker/         # konteyner açılış betiği (migration + uvicorn)
+scripts/        # toplama işi betiği, Windows zamanlanmış görev kaydı
 Dockerfile, docker-compose.yml, alembic.ini, .env.example
 ```
 
@@ -217,7 +236,8 @@ Ayrıntılı alt aşamalar ve alınan kararlar: [docs/YOL_HARITASI.md](docs/YOL_
 - [x] Tahmin API'si (FastAPI): `/forecast/{station}`, `/alerts`, `/stations`, `/health`
 - [x] Streamlit panosu: harita, tahmin grafiği ve %80'lik aralık, uyarı ve uyarı riski, "neden?" açıklaması, model performansı
 - [x] Docker: API + PostgreSQL (docker compose), tahmin ve uyarı kalıcılığı, Alembic migration'ları
-- [ ] GitHub Actions ile günlük otomatik tahmin
+- [x] Saatlik otomatik tahmin ve ölçüm kaydı (yerel zamanlanmış görev; SİM yalnızca Türkiye'den erişilebildiği için GitHub Actions yerine)
+- [ ] Canlı performans: kaydedilen tahminlerin gerçekleşen ölçümlerle karşılaştırılması
 - [ ] Hugging Face Spaces'te yayına alma
 
 ## Sınırlamalar

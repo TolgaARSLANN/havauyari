@@ -4,6 +4,7 @@ API (test_api.py) ve pano (test_ui.py) testleri ağ ve gerçek model dosyası ol
 """
 
 import json
+import os
 from datetime import datetime, timedelta
 
 import lightgbm as lgb
@@ -17,6 +18,8 @@ from havauyari.features.build import build_station_features, feature_columns
 from havauyari.serving.service import ForecastService, load_artifacts, prepare_frame
 
 NOW = datetime(2026, 1, 15, 12)
+# DB entegrasyon testleri (pytest -m db) bu veritabanının tablolarını SİLER; tanımlı değilse atlanır
+TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
 STATIONS = [
     {"slug": "s1", "sim_id": "x1", "name": "Test - Bir", "city": "c1", "lat": 40.0,
      "lon": 29.0, "area_type": "Kentsel", "source_type": "Isınma"},
@@ -107,3 +110,29 @@ def models_dir(tmp_path_factory):
 @pytest.fixture
 def service(models_dir):
     return ForecastService(load_artifacts(models_dir), FakeProvider(), clock=lambda: NOW)
+
+
+@pytest.fixture(scope="session")
+def pg_repo():
+    """Test veritabanı: oturum başında şema sıfırdan kurulur (base -> head)."""
+    if not TEST_DATABASE_URL:
+        pytest.skip("TEST_DATABASE_URL tanımlı değil")
+    from havauyari.storage.migrate import downgrade, upgrade
+    from havauyari.storage.repository import ForecastRepository
+
+    downgrade(TEST_DATABASE_URL)
+    upgrade(TEST_DATABASE_URL)
+    repo = ForecastRepository.from_url(TEST_DATABASE_URL)
+    yield repo
+    repo.engine.dispose()
+
+
+@pytest.fixture
+def clean_db(pg_repo):
+    """Her test boş tablolarla başlar."""
+    from sqlalchemy import text
+
+    with pg_repo.engine.begin() as c:
+        c.execute(text("TRUNCATE runs, measurements, alerts, forecasts, stations "
+                       "RESTART IDENTITY"))
+    return pg_repo

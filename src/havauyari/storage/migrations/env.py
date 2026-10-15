@@ -5,8 +5,9 @@ from __future__ import annotations
 from alembic import context
 from sqlalchemy import create_engine, pool
 
+from havauyari.storage import database_url
 from havauyari.storage.models import Base
-from havauyari.storage.repository import database_url, normalize_url
+from havauyari.storage.repository import normalize_url
 
 config = context.config
 target_metadata = Base.metadata

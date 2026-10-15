@@ -5,11 +5,13 @@
     -> http://127.0.0.1:8000/docs
 
 Uç noktalar:
-    GET /health                 servis ve model durumu
+    GET /health                 servis, model ve veritabanı durumu
     GET /stations               istasyonlar ve uyarı karar eşikleri
     GET /forecast/{station}     24 saat sonrası için tahmin, %80'lik aralık, uyarı, açıklama
     GET /alerts                 tüm istasyonlar (?only_alerts=true: yalnızca uyarı ya da uyarı
                                 riski olanlar)
+
+DATABASE_URL tanımlıysa tahminler PostgreSQL'e yazılır ve oradan okunur (bkz. serving.service).
 """
 
 from __future__ import annotations
@@ -18,7 +20,13 @@ from fastapi import FastAPI, HTTPException, Query
 
 from havauyari import __version__
 from havauyari.serving.schemas import Forecast, Health, Station, StationError
-from havauyari.serving.service import DataUnavailable, ForecastService
+from havauyari.serving.service import (
+    DataUnavailable,
+    ForecastService,
+    Repository,
+    default_repository,
+)
+from havauyari.storage import StorageError
 
 DESCRIPTION = (
     "Türkiye'deki hava kalitesi istasyonlarında **24 saat sonra ölçülecek PM2.5** değerinin "
@@ -29,9 +37,17 @@ DESCRIPTION = (
 
 
 def create_app(service: ForecastService | None = None) -> FastAPI:
-    """`service` verilmezse ilk istekte gerçek model ve canlı veri sağlayıcıyla yüklenir."""
+    """`service` verilmezse ilk istekte gerçek model, canlı veri sağlayıcı ve (DATABASE_URL
+    tanımlıysa) veritabanı deposuyla yüklenir."""
     app = FastAPI(title="HavaUyarı API", version=__version__, description=DESCRIPTION)
-    state: dict = {"service": service, "error": None}
+    state: dict = {"service": service, "error": None,
+                   "repo": service.repo if service is not None else None,
+                   "repo_ready": service is not None}
+
+    def get_repo() -> Repository | None:
+        if not state["repo_ready"]:
+            state["repo"], state["repo_ready"] = default_repository(), True
+        return state["repo"]
 
     def get_service() -> ForecastService:
         if state["service"] is None and state["error"] is None:
@@ -39,21 +55,34 @@ def create_app(service: ForecastService | None = None) -> FastAPI:
                 from havauyari.serving.data import LiveProvider
                 from havauyari.serving.service import load_artifacts
 
-                state["service"] = ForecastService(load_artifacts(), LiveProvider())
+                state["service"] = ForecastService(load_artifacts(), LiveProvider(),
+                                                   repository=get_repo())
             except FileNotFoundError as e:
                 state["error"] = str(e)
         if state["service"] is None:
             raise HTTPException(503, detail=state["error"])
         return state["service"]
 
+    def database_status() -> str:
+        repo = get_repo()
+        if repo is None:
+            return "yapılandırılmadı"
+        try:
+            repo.ping()
+        except StorageError as e:
+            return f"hata: {e}"
+        return "ok"
+
     @app.get("/health", response_model=Health, tags=["servis"])
     def health() -> Health:
+        database = database_status()
         try:
             svc = get_service()
         except HTTPException as e:
-            return Health(status="model yok", model_loaded=False, detail=e.detail)
+            return Health(status="model yok", model_loaded=False, detail=e.detail,
+                          database=database)
         return Health(status="ok", model_loaded=True, model_created=svc.a.card["created"],
-                      stations=len(svc.a.stations))
+                      stations=len(svc.a.stations), database=database)
 
     @app.get("/stations", response_model=list[Station], tags=["istasyonlar"])
     def stations() -> list[dict]:

@@ -7,14 +7,17 @@ aynı model sürümüyle üretilmişse kullanılır; aksi halde servis tahmini y
 
 from __future__ import annotations
 
-import os
-from collections.abc import Iterable
+import functools
+from collections.abc import Callable, Iterable
 from datetime import datetime
+from typing import ParamSpec, TypeVar
 
 from sqlalchemy import Engine, create_engine, select, text, update
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from havauyari.storage import StorageError, database_url
 from havauyari.storage.models import AlertRow, ForecastRow, StationRow
 from havauyari.storage.timeutil import decode_payload, encode_payload, to_local, to_utc
 
@@ -29,8 +32,20 @@ def normalize_url(url: str) -> str:
     return url
 
 
-def database_url() -> str | None:
-    return os.environ.get("DATABASE_URL") or None
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def _storage_errors(fn: Callable[P, R]) -> Callable[P, R]:
+    """SQLAlchemy hatalarını, servisin bildiği tek hata türüne (StorageError) çevirir."""
+    @functools.wraps(fn)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        try:
+            return fn(*args, **kwargs)
+        except SQLAlchemyError as e:
+            first_line = str(getattr(e, "orig", None) or e).strip().splitlines()[0]
+            raise StorageError(f"{type(e).__name__}: {first_line}") from e
+    return wrapper
 
 
 class ForecastRepository:
@@ -42,11 +57,13 @@ class ForecastRepository:
         # pool_pre_ping: veritabanı yeniden başlarsa kopmuş bağlantılar sessizce yenilenir
         return cls(create_engine(normalize_url(url), pool_pre_ping=True))
 
+    @_storage_errors
     def ping(self) -> None:
         with self.engine.connect() as conn:
             conn.execute(text("SELECT 1"))
 
     # --- istasyonlar ---------------------------------------------------------------------
+    @_storage_errors
     def sync_stations(self, stations: Iterable[dict]) -> None:
         rows = [{"slug": s["slug"], **{k: s.get(k) for k in STATION_FIELDS}} for s in stations]
         if not rows:
@@ -59,6 +76,7 @@ class ForecastRepository:
             s.execute(stmt)
 
     # --- tahminler -----------------------------------------------------------------------
+    @_storage_errors
     def get_forecast(self, station: str, issued_at: datetime, target_time: datetime,
                      model_version: str) -> dict | None:
         """Bu saatin, bu modelle verilmiş tahmini varsa yanıt sözlüğünü (yerel saatle) döner."""
@@ -71,6 +89,7 @@ class ForecastRepository:
             payload = s.execute(q).scalar_one_or_none()
         return None if payload is None else decode_payload(payload)
 
+    @_storage_errors
     def save_forecast(self, result: dict, model_version: str) -> None:
         """Tahmini ve uyarı durumunu tek işlemde yazar (aynı istasyon + hedef saat: upsert)."""
         key = {"station": result["station"], "target_time": to_utc(result["target_time"])}
@@ -103,6 +122,7 @@ class ForecastRepository:
                           .values(**values, updated_at=text("now()")))
 
     # --- uyarı geçmişi -------------------------------------------------------------------
+    @_storage_errors
     def alert_history(self, station: str | None = None) -> list[dict]:
         q = select(AlertRow).order_by(AlertRow.target_time, AlertRow.station)
         if station is not None:

@@ -104,4 +104,5 @@ class Health(BaseModel):
     detail: str | None = None
     database: str = Field("yapılandırılmadı",
                           description="Veritabanı bağlantısı: 'ok', 'yapılandırılmadı' "
-                                      "(DATABASE_URL yok) ya da 'hata: ...'")
+                                      "(DATABASE_URL yok) ya da 'hata' (ayrıntı sunucu "
+                                      "loglarında)")

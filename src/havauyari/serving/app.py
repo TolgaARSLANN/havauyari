@@ -16,6 +16,8 @@ DATABASE_URL tanımlıysa tahminler PostgreSQL'e yazılır ve oradan okunur (bkz
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, HTTPException, Query
 
 from havauyari import __version__
@@ -27,6 +29,8 @@ from havauyari.serving.service import (
     default_repository,
 )
 from havauyari.storage import StorageError
+
+log = logging.getLogger(__name__)
 
 DESCRIPTION = (
     "Türkiye'deki hava kalitesi istasyonlarında **24 saat sonra ölçülecek PM2.5** değerinin "
@@ -70,7 +74,10 @@ def create_app(service: ForecastService | None = None) -> FastAPI:
         try:
             repo.ping()
         except StorageError as e:
-            return f"hata: {e}"
+            # Ayrıntı (sunucu adı, sürücü mesajı) yalnızca loga: herkese açık yanıtta altyapı
+            # bilgisi verilmez
+            log.warning("Veritabanı sağlık kontrolü başarısız: %s", e)
+            return "hata"
         return "ok"
 
     @app.get("/health", response_model=Health, tags=["servis"])

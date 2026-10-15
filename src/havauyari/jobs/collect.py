@@ -81,6 +81,9 @@ def collect(service: ForecastService) -> RunResult:
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s",
                         datefmt="%Y-%m-%d %H:%M:%S")
+    # Alembic'in eklenti kurulum satırları her saat loga düşmesin; migration satırları kalsın
+    logging.getLogger("alembic").setLevel(logging.WARNING)
+    logging.getLogger("alembic.runtime.migration").setLevel(logging.INFO)
     from havauyari.storage import database_url
 
     url = database_url()

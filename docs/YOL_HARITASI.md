@@ -428,7 +428,7 @@ değil; CAMS'ın geçmiş tahmin arşivi de Open-Meteo'da yok. Asıl değer, **y
 
 - [x] **7.1 Docker**: `Dockerfile` + `docker-compose.yml` (api + PostgreSQL). Tahminler ve uyarılar veritabanında saklanır (SQLAlchemy 2 + Alembic); migration'lar konteyner açılışında çalışır. Pano henüz compose'a eklenmedi.
 - [x] **7.2 CI genişletme**: testler + lint + Docker build; DB entegrasyon testleri postgres servis konteyneriyle
-- [ ] **7.3 Günlük tahmin işi**: GitHub Actions cron → veri çek, tahmin üret, sonuçları kaydet
+- [x] **7.3 Saatlik tahmin işi**: `python -m havauyari.jobs.collect` her saat tahmini, uyarı durumunu ve ölçümleri PostgreSQL'e kaydeder (`measurements`, `runs` tabloları). SİM yurt dışından (GitHub Actions dahil) erişilemediği için cron yerine yerel Windows Görev Zamanlayıcı kullanılır (`scripts/windows/register_collect_task.ps1`).
 - [ ] **7.4 İzleme**: tahmin ve gerçekleşen değerlerin kaydı, hata artarsa uyarı (drift sinyali)
 - [ ] **7.5 (Opsiyonel) Haftalık yeniden eğitim**
 

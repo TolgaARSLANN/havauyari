@@ -18,7 +18,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from havauyari.storage import StorageError, database_url
-from havauyari.storage.models import AlertRow, ForecastRow, StationRow
+from havauyari.storage.models import (
+    AlertRow,
+    ForecastRow,
+    MeasurementRow,
+    RunRow,
+    StationRow,
+)
 from havauyari.storage.timeutil import decode_payload, encode_payload, to_local, to_utc
 
 STATION_FIELDS = ("sim_id", "name", "city", "lat", "lon", "area_type", "source_type")
@@ -120,6 +126,33 @@ class ForecastRepository:
                           .where(AlertRow.station == key["station"],
                                  AlertRow.target_time == key["target_time"])
                           .values(**values, updated_at=text("now()")))
+
+    # --- ölçümler ------------------------------------------------------------------------
+    @_storage_errors
+    def save_measurements(self, station: str, points: Iterable[dict]) -> int:
+        """Gerçekleşen ölçümleri yazar (aynı istasyon + saat: üzerine yazılır). Ölçülmemiş saatler
+        (pm25 = None) atlanır. Yazılan satır sayısını döner."""
+        rows = [{"station": station, "time": to_utc(p["time"]), "pm25": p["pm25"]}
+                for p in points if p.get("pm25") is not None]
+        if not rows:
+            return 0
+        stmt = insert(MeasurementRow).values(rows)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[MeasurementRow.station, MeasurementRow.time],
+            set_={"pm25": stmt.excluded.pm25, "updated_at": text("now()")})
+        with Session(self.engine) as s, s.begin():
+            s.execute(stmt)
+        return len(rows)
+
+    # --- toplama işi çalışmaları ---------------------------------------------------------
+    @_storage_errors
+    def record_run(self, started_at: datetime, finished_at: datetime, issued_at: datetime,
+                   ok: int, failed: int, measurements: int, errors: dict[str, str]) -> None:
+        """`started_at`/`finished_at` tz bilgili (UTC); `issued_at` yerel saat."""
+        with Session(self.engine) as s, s.begin():
+            s.add(RunRow(started_at=started_at, finished_at=finished_at,
+                         issued_at=to_utc(issued_at), ok=ok, failed=failed,
+                         measurements=measurements, errors=errors))
 
     # --- uyarı geçmişi -------------------------------------------------------------------
     @_storage_errors

@@ -6,42 +6,27 @@ CI'da GitHub Actions'ın postgres servis konteyneriyle, yerelde `make test-db` i
 """
 
 import copy
-import os
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from conftest import NOW, FakeProvider
+from conftest import NOW, TEST_DATABASE_URL, FakeProvider
 from fastapi.testclient import TestClient
 
 from havauyari.serving.app import create_app
 from havauyari.serving.service import ForecastService, load_artifacts
 
-URL = os.environ.get("TEST_DATABASE_URL")
-pytestmark = [pytest.mark.db,
-              pytest.mark.skipif(not URL, reason="TEST_DATABASE_URL tanımlı değil")]
+pytestmark = [pytest.mark.db, pytest.mark.skipif(not TEST_DATABASE_URL,
+                                                 reason="TEST_DATABASE_URL tanımlı değil")]
 
-if URL:
+if TEST_DATABASE_URL:
     from sqlalchemy import text
-
-    from havauyari.storage.migrate import downgrade, upgrade
-    from havauyari.storage.repository import ForecastRepository
 
 NOW_UTC = datetime(2026, 1, 15, 9, tzinfo=UTC)          # NOW = 12.00 Türkiye saati (UTC+3)
 
 
-@pytest.fixture(scope="module")
-def repo():
-    downgrade(URL)                                       # temiz başlangıç: base -> head
-    upgrade(URL)
-    r = ForecastRepository.from_url(URL)
-    yield r
-    r.engine.dispose()
-
-
-@pytest.fixture(autouse=True)
-def clean(repo):
-    with repo.engine.begin() as c:
-        c.execute(text("TRUNCATE alerts, forecasts, stations RESTART IDENTITY"))
+@pytest.fixture
+def repo(clean_db):
+    return clean_db                                      # boş tablolarla (conftest)
 
 
 def make_service(models_dir, repo, provider=None, clock=lambda: NOW):

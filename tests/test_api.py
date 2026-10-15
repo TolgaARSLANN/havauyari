@@ -1,5 +1,7 @@
 """API uçtan uca testleri: ağ ve gerçek model dosyası olmadan (sahte sağlayıcı + küçük model)."""
 
+import subprocess
+import sys
 from datetime import timedelta
 
 import pytest
@@ -109,3 +111,10 @@ def test_health_without_model(monkeypatch):
     h = c.get("/health").json()
     assert h["model_loaded"] is False and "Model" in h["detail"]
     assert c.get("/stations").status_code == 503
+
+
+def test_serving_imports_without_matplotlib():
+    """İnce Docker imajında matplotlib yok: servis modülleri onsuz yüklenebilmeli."""
+    code = ("import sys; sys.modules['matplotlib'] = None; "
+            "import havauyari.serving.app, havauyari.serving.service")
+    subprocess.run([sys.executable, "-c", code], check=True)

@@ -196,6 +196,14 @@ def status_of(rows: list[dict]) -> str:
 # ---------------------------------------------------------------------------------------------
 # HTML parçaları (renk her zaman metin ve/veya ikonla birlikte)
 # ---------------------------------------------------------------------------------------------
+def first_param(value) -> str | None:
+    """Adres parametresinin ilk değeri. Streamlit sürümüne göre `st.query_params` değeri metin
+    (1.66+, gerçek tarayıcı) ya da liste (eski AppTest) olarak gelebilir; ikisi de desteklenir."""
+    if isinstance(value, list | tuple):
+        return value[0] if value else None
+    return value
+
+
 def tr_upper(s: str) -> str:
     """Türkçe büyük harf: i -> İ, ı -> I."""
     return s.replace("i", "İ").replace("ı", "I").upper()

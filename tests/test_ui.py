@@ -11,6 +11,7 @@ from havauyari.ui.components import (
     explanation_figure,
     explanation_sentence,
     feature_label,
+    first_param,
     forecast_figure,
     map_figure,
 )
@@ -144,7 +145,30 @@ def test_streamlit_app_renders_with_fake_service(service, monkeypatch):
     assert not at.exception, at.exception
     assert at.session_state["istasyon"] == "s2"
     assert at.session_state["nav"].endswith("İstasyon detayı")
-    assert at.query_params["istasyon"] == ["s2"]
+    # Streamlit 1.66+ değeri metin, eski sürümler liste olarak döndürür
+    assert first_param(at.query_params["istasyon"]) == "s2"
+
+
+@pytest.mark.parametrize("value", ["s2", ["s2"]], ids=["metin", "liste"])
+def test_shared_link_opens_station(service, monkeypatch, value):
+    """?istasyon=s2 bağlantısı: değer metin de liste de olsa istasyon seçilir, detay açılır."""
+    from streamlit.testing.v1 import AppTest
+
+    import havauyari.ui.state as ui_state
+
+    monkeypatch.setattr(ui_state, "SERVICE_FACTORY", lambda: service)
+    at = AppTest.from_file(str(APP), default_timeout=60)
+    at.query_params["istasyon"] = value
+    at.run()
+    assert not at.exception, at.exception
+    assert at.session_state["istasyon"] == "s2"
+    assert at.session_state["nav"].endswith("İstasyon detayı")
+
+
+def test_first_param():
+    assert first_param("s2") == "s2"
+    assert first_param(["s2", "s1"]) == "s2"
+    assert first_param([]) is None and first_param(None) is None
 
 
 def test_new_overview_fragments(forecast):

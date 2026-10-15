@@ -14,3 +14,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Python sürümü CI (setup-python "3.11") ve requires-python ile birlikte, elle yükseltilir.
+    # Yalnızca yama sürümleri (3.11.x) otomatik gelir; test edilen ortamla imaj ayrışmasın.
+    ignore:
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]

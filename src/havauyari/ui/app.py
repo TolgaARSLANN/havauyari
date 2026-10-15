@@ -34,6 +34,7 @@ from havauyari.ui.components import (
     explanation_figure,
     explanation_sentence,
     families_figure,
+    first_param,
     forecast_figure,
     header_html,
     hero_html,
@@ -202,7 +203,7 @@ stations = service.a.stations
 
 # Paylaşılan bağlantıyla gelindiyse (?istasyon=...) istasyonu seç ve detay sekmesini aç
 if ordered and "istasyon" not in st.session_state:
-    wanted = st.query_params.get("istasyon")
+    wanted = first_param(st.query_params.get("istasyon"))
     st.session_state["istasyon"] = wanted if wanted in ordered else ordered[0]
     if wanted in ordered:
         st.session_state["nav"] = TABS[1]
